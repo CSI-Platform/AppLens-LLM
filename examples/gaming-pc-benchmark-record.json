@@ -1,0 +1,36 @@
+{
+  "schema_version": "0.1",
+  "run_id": "gaming-pc-qwen25-7b-cuda-mmq-applens-eval-20260503",
+  "created_at": "2026-05-03T19:13:34Z",
+  "host": {
+    "name": "cody-System-Product-Name",
+    "os": "Ubuntu 24.04.4 LTS",
+    "gpu": "NVIDIA GeForce GTX 1660 SUPER",
+    "vram_mb": 6144
+  },
+  "runtime": {
+    "backend": "llama.cpp",
+    "build": "build-cuda-mmq d05fe1d",
+    "command": "llama-server -m qwen2.5-7b-ollama.gguf -ngl 99 -t 8 -c 4096 --parallel 1 --host 127.0.0.1 --port 8080"
+  },
+  "model": {
+    "name": "qwen2.5:7b",
+    "path": "/home/cody/local-llm/models/qwen2.5-7b-ollama.gguf",
+    "quantization": "Q4_K_M GGUF"
+  },
+  "workload": {
+    "prompt_tokens": 1203,
+    "completion_tokens": 49
+  },
+  "metrics": {
+    "prompt_tokens_per_second": 545.09,
+    "generation_tokens_per_second": 44.57,
+    "latency_ms": 3341,
+    "vram_used_mb": 5329,
+    "temperature_c": 52
+  },
+  "outcome": {
+    "status": "pass",
+    "notes": "Tiny AppLens-Tune summary eval completed through llama.cpp OpenAI-compatible endpoint."
+  }
+}

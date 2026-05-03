@@ -1,0 +1,53 @@
+{
+  "schema_version": "0.1",
+  "plan_id": "gaming-pc-qwen25-7b-llamacpp-cuda-mmq",
+  "machine_class": "small_local_ai_worker",
+  "workload": {
+    "name": "AppLens-Tune local report summarization and eval sweeps",
+    "intent": "agent_runtime"
+  },
+  "recommended_runtime": {
+    "backend": "llama.cpp",
+    "model": "qwen2.5:7b",
+    "quantization": "Q4_K_M GGUF",
+    "launch_profile": {
+      "context_tokens": 4096,
+      "threads": 8,
+      "gpu_layers": 99,
+      "host": "127.0.0.1",
+      "port": 8080,
+      "extra_flags": ["--parallel", "1"]
+    }
+  },
+  "safe_jobs": ["read_only_scan", "benchmark", "eval_sweep", "dataset_prep", "local_inference"],
+  "gated_jobs": [
+    { "job": "training", "gate": "manifest_required" },
+    { "job": "large_download", "gate": "user_approval" },
+    { "job": "service_change", "gate": "unsupported" }
+  ],
+  "findings": [
+    {
+      "category": "Hardware",
+      "risk": "Low",
+      "evidence": "GTX 1660 SUPER with 6 GB VRAM; CUDA available; llama.cpp CUDA-MMQ measured best.",
+      "guidance": "Use quantized inference and benchmark-backed eval sweeps. Avoid large local fine-tunes.",
+      "verification": "Run llama.cpp health, chat completion, and benchmark smoke before using the endpoint."
+    },
+    {
+      "category": "Training",
+      "risk": "Medium",
+      "evidence": "PyTorch CUDA smoke passes, but VRAM is limited.",
+      "guidance": "Training requires a tiny target, manifest, stop conditions, and user approval.",
+      "verification": "Confirm manifest, output directory, max runtime, and OOM abort behavior before training."
+    }
+  ],
+  "validation": {
+    "requires_benchmark": true,
+    "requires_user_approval": true,
+    "policy_notes": [
+      "Bind servers to 127.0.0.1 by default.",
+      "Do not alter services, startup entries, drivers, firewall, or model caches.",
+      "Use cached models unless downloads are approved."
+    ]
+  }
+}

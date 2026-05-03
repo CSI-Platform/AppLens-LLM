@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://csi-platform.local/applens-llm/training-example.schema.json",
+  "title": "AppLens-LLM Training Example",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "example_id",
+    "source",
+    "input",
+    "messages",
+    "expected_output"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "example_id": { "type": "string", "minLength": 1 },
+    "source": {
+      "type": "string",
+      "enum": ["real_sanitized", "synthetic", "benchmark_generated", "policy_contrast"]
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["snapshot_summary", "local_ai_profile", "workload_request"],
+      "properties": {
+        "snapshot_summary": { "type": "string", "minLength": 1 },
+        "local_ai_profile": { "type": "string", "minLength": 1 },
+        "benchmark_facts": { "type": "string" },
+        "workload_request": { "type": "string", "minLength": 1 }
+      }
+    },
+    "messages": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "content"],
+        "properties": {
+          "role": { "type": "string", "enum": ["system", "user", "assistant"] },
+          "content": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "expected_output": {
+      "$ref": "deployment-plan.schema.json"
+    }
+  }
+}

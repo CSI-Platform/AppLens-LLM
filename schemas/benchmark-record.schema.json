@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://csi-platform.local/applens-llm/benchmark-record.schema.json",
+  "title": "AppLens-LLM Benchmark Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "created_at",
+    "host",
+    "runtime",
+    "model",
+    "workload",
+    "metrics",
+    "outcome"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "host": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "os", "gpu", "vram_mb"],
+      "properties": {
+        "name": { "type": "string" },
+        "os": { "type": "string" },
+        "gpu": { "type": "string" },
+        "vram_mb": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["backend", "build", "command"],
+      "properties": {
+        "backend": { "type": "string" },
+        "build": { "type": "string" },
+        "command": { "type": "string" }
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "path", "quantization"],
+      "properties": {
+        "name": { "type": "string" },
+        "path": { "type": "string" },
+        "quantization": { "type": "string" }
+      }
+    },
+    "workload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prompt_tokens", "completion_tokens"],
+      "properties": {
+        "prompt_tokens": { "type": "integer", "minimum": 0 },
+        "completion_tokens": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prompt_tokens_per_second", "generation_tokens_per_second", "latency_ms", "vram_used_mb"],
+      "properties": {
+        "prompt_tokens_per_second": { "type": "number", "minimum": 0 },
+        "generation_tokens_per_second": { "type": "number", "minimum": 0 },
+        "latency_ms": { "type": "number", "minimum": 0 },
+        "vram_used_mb": { "type": "integer", "minimum": 0 },
+        "temperature_c": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "notes"],
+      "properties": {
+        "status": { "type": "string", "enum": ["pass", "fail", "oom", "timeout", "crash"] },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}
