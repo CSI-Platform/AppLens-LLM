@@ -29,6 +29,7 @@ The first base model target is Qwen3.5-2B. Training should wait until the baseli
 uv sync --dev
 uv run pytest
 uv run applens-llm validate-jsonl --schema training-example data/examples.seed.jsonl
+uv run applens-llm validate-jsonl --schema machine-profile data/machines.seed.jsonl
 uv run applens-llm eval --examples data/examples.seed.jsonl --output out/eval-report.json
 ```
 
@@ -50,4 +51,4 @@ Generated benchmark output is ignored under `out/`.
 
 V1 can start local model runtimes, run benchmarks, write manifests, and prepare sanitized datasets. It must not change services, startup entries, drivers, firewall rules, firmware, or user data.
 
-See `ROADMAP.md`, `docs/ARCHITECTURE.md`, and `docs/DEVELOPER_GUIDE.md`.
+See `ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/CAPTURE_GUIDE.md`, and `docs/DEVELOPER_GUIDE.md`.

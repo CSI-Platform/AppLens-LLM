@@ -13,6 +13,7 @@ uv run pytest
 uv run applens-llm validate --schema deployment-plan examples/gaming-pc-deployment-plan.json
 uv run applens-llm validate --schema benchmark-record examples/gaming-pc-benchmark-record.json
 uv run applens-llm validate-jsonl --schema training-example data/examples.seed.jsonl
+uv run applens-llm validate-jsonl --schema machine-profile data/machines.seed.jsonl
 ```
 
 ## Run The Eval Harness

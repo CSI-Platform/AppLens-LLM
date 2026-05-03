@@ -11,7 +11,13 @@ from referencing import Registry, Resource
 from applens_llm.paths import repo_root
 
 
-SCHEMA_NAMES = ("deployment-plan", "benchmark-record", "training-example", "eval-report")
+SCHEMA_NAMES = (
+    "deployment-plan",
+    "benchmark-record",
+    "training-example",
+    "eval-report",
+    "machine-profile",
+)
 
 
 class SchemaValidationError(ValueError):
