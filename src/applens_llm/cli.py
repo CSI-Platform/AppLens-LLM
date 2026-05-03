@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from applens_llm.bench import run_openai_chat_benchmark
+from applens_llm.eval import evaluate_training_examples_file, write_eval_report
 from applens_llm.schemas import SchemaValidationError, validate_document, validate_jsonl_file
 
 
@@ -33,6 +34,11 @@ def main(argv: list[str] | None = None) -> int:
                 quantization=args.quantization,
             )
             print(f"{args.output} valid benchmark record: {record['run_id']}")
+            return 0
+        if args.command == "eval":
+            report = evaluate_training_examples_file(args.examples)
+            write_eval_report(report, args.output)
+            print(f"{report['scores']['passed']}/{report['total']} pass -> {args.output}")
             return 0
     except SchemaValidationError as exc:
         print(f"schema error: {exc}")
@@ -67,6 +73,10 @@ def _build_parser() -> argparse.ArgumentParser:
     bench.add_argument("--backend", default="jan")
     bench.add_argument("--model-path", default="local")
     bench.add_argument("--quantization", default="unknown")
+
+    eval_parser = subparsers.add_parser("eval")
+    eval_parser.add_argument("--examples", type=Path, required=True)
+    eval_parser.add_argument("--output", type=Path, default=Path("out/eval-report.json"))
 
     return parser
 

@@ -29,6 +29,7 @@ The first base model target is Qwen3.5-2B. Training should wait until the baseli
 uv sync --dev
 uv run pytest
 uv run applens-llm validate-jsonl --schema training-example data/examples.seed.jsonl
+uv run applens-llm eval --examples data/examples.seed.jsonl --output out/eval-report.json
 ```
 
 Jan default endpoint:

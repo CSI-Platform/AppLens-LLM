@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://csi-platform.local/applens-llm/eval-report.schema.json",
+  "title": "AppLens-LLM Eval Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "created_at", "source", "total", "scores", "results"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "source": { "type": "string", "minLength": 1 },
+    "total": { "type": "integer", "minimum": 0 },
+    "scores": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_valid",
+        "policy_valid",
+        "runtime_match",
+        "expected_match",
+        "passed",
+        "pass_rate"
+      ],
+      "properties": {
+        "schema_valid": { "type": "integer", "minimum": 0 },
+        "policy_valid": { "type": "integer", "minimum": 0 },
+        "runtime_match": { "type": "integer", "minimum": 0 },
+        "expected_match": { "type": "integer", "minimum": 0 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "pass_rate": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["example_id", "status", "checks", "issues"],
+        "properties": {
+          "example_id": { "type": "string", "minLength": 1 },
+          "status": { "type": "string", "enum": ["pass", "fail"] },
+          "checks": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["schema_valid", "policy_valid", "runtime_match", "expected_match"],
+            "properties": {
+              "schema_valid": { "type": "boolean" },
+              "policy_valid": { "type": "boolean" },
+              "runtime_match": { "type": "boolean" },
+              "expected_match": { "type": "boolean" }
+            }
+          },
+          "issues": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

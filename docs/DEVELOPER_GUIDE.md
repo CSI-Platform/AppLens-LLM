@@ -15,6 +15,20 @@ uv run applens-llm validate --schema benchmark-record examples/gaming-pc-benchma
 uv run applens-llm validate-jsonl --schema training-example data/examples.seed.jsonl
 ```
 
+## Run The Eval Harness
+
+```powershell
+uv run applens-llm eval --examples data/examples.seed.jsonl --output out/eval-report.json
+```
+
+The first eval checks:
+
+- assistant output parses as JSON
+- assistant output validates as `deployment-plan`
+- V1 policy boundaries are respected
+- runtime fields match expected labels
+- core expected fields match expected labels
+
 ## Run A Local Endpoint Benchmark
 
 Jan defaults to `http://127.0.0.1:1337/v1`:

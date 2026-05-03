@@ -13,6 +13,7 @@
 - Build a baseline eval set of 50 to 100 examples.
 - Score schema validity, policy agreement, runtime fit, and benchmark grounding.
 - Run Qwen3.5-2B zero-shot and few-shot baselines before training.
+- Track every eval report under ignored `out/` until promoted.
 
 ## Milestone 2: AppLens-Tailor LoRA
 
