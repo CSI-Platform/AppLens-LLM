@@ -6,8 +6,8 @@ Use this guide to turn each available machine into a clean AppLens-LLM training 
 
 1. ASUS ProArt PX13: raw AppLens/AppLens-Tune reports captured. Next step is AppLens-Bench.
 2. HP ZBook: AppLens report captured, AppLens-Tune still needs a run log or fixed runner retry.
-3. Dell XPS: thin laptop and CPU/iGPU baseline.
-4. HP EliteBook: business laptop and conservative policy baseline.
+3. Dell XPS 13 9350: raw Linux AppLens/AppLens-Tune reports captured. Exact SKU and benchmark still pending.
+4. HP EliteBook 845 G8: raw Linux AppLens/AppLens-Tune reports captured. Exact SKU and benchmark still pending.
 5. HP laptop: consumer laptop baseline.
 6. Lenovo laptop: vendor diversity.
 7. Old MacBook: macOS baseline, best effort.
@@ -47,6 +47,12 @@ For CPU-only or weak machines:
 
 Raw local captures stay out of git.
 
+Create an ignored review manifest after captures are dropped into `../AppLens/raw`:
+
+```powershell
+uv run applens-llm ingest-captures --source ../AppLens/raw --output data/raw/capture-records.jsonl
+```
+
 Promote only:
 
 - sanitized `machine-profile` rows
@@ -58,7 +64,8 @@ The eval set should prefer real machines. Synthetic examples should fill missing
 
 ## Capture Backlog
 
-- Standardize AppLens capture reports as `.md` files. Keep diagnostic logs as `.txt`, but make Markdown the curated AppLens-LLM training intake contract because section headings, tables, and bullets are easier to review and parse.
+- AppLens capture reports are standardized as `.md` files. Diagnostic logs stay `.txt`; Markdown is the curated AppLens-LLM training intake contract because section headings, tables, and bullets are easier to review and parse.
+- Capture-folder ingestion now produces ignored `capture-record` manifests for review before promotion.
 - Add JSON export after Markdown. JSON should become the best machine-readable format for schema-backed training and eval generation.
 - First target: promote 5 real AppLens reports into sanitized machine profiles and training/eval candidates.
 

@@ -15,7 +15,8 @@
 - Score schema validity, policy agreement, runtime fit, and benchmark grounding.
 - Run Qwen3.5-2B zero-shot and few-shot baselines before training.
 - Track every eval report under ignored `out/` until promoted.
-- Backlog: add Markdown export to AppLens scripts, followed by JSON export for schema-backed dataset generation.
+- Capture AppLens Markdown reports into ignored review manifests before promotion.
+- Backlog: add JSON export for schema-backed dataset generation.
 
 ## Milestone 2: AppLens-Tailor LoRA
 

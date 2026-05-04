@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://csi-platform.local/applens-llm/capture-record.schema.json",
+  "title": "AppLens-LLM Capture Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "capture_id",
+    "source",
+    "reports",
+    "metadata",
+    "sections",
+    "inferred",
+    "privacy"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "capture_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root_name", "folder"],
+      "properties": {
+        "root_name": { "type": "string", "minLength": 1 },
+        "folder": { "type": "string", "minLength": 1 }
+      }
+    },
+    "reports": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["applens", "applens_tune", "readme", "applens_log", "applens_tune_log"],
+      "properties": {
+        "applens": { "$ref": "#/$defs/nullable_path" },
+        "applens_tune": { "$ref": "#/$defs/nullable_path" },
+        "readme": { "$ref": "#/$defs/nullable_path" },
+        "applens_log": { "$ref": "#/$defs/nullable_path" },
+        "applens_tune_log": { "$ref": "#/$defs/nullable_path" }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["computer", "user", "scan_date", "mode", "machine", "os", "ram", "free_space"],
+      "properties": {
+        "computer": { "$ref": "#/$defs/nullable_text" },
+        "user": { "$ref": "#/$defs/nullable_text" },
+        "scan_date": { "$ref": "#/$defs/nullable_text" },
+        "mode": { "$ref": "#/$defs/nullable_text" },
+        "machine": { "$ref": "#/$defs/nullable_text" },
+        "os": { "$ref": "#/$defs/nullable_text" },
+        "ram": { "$ref": "#/$defs/nullable_text" },
+        "free_space": { "$ref": "#/$defs/nullable_text" }
+      }
+    },
+    "sections": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["applens", "applens_tune"],
+      "properties": {
+        "applens": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "applens_tune": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "inferred": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "os_family",
+        "has_applens_report",
+        "has_applens_tune_report",
+        "has_local_llm_profile",
+        "has_gpu_profile"
+      ],
+      "properties": {
+        "os_family": {
+          "type": "string",
+          "enum": ["windows", "linux", "macos", "unknown"]
+        },
+        "has_applens_report": { "type": "boolean" },
+        "has_applens_tune_report": { "type": "boolean" },
+        "has_local_llm_profile": { "type": "boolean" },
+        "has_gpu_profile": { "type": "boolean" }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sanitized", "raw_paths_detected", "serial_or_uuid_terms_detected"],
+      "properties": {
+        "sanitized": { "type": "boolean" },
+        "raw_paths_detected": { "type": "boolean" },
+        "serial_or_uuid_terms_detected": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "nullable_path": {
+      "type": ["string", "null"],
+      "minLength": 1
+    },
+    "nullable_text": {
+      "type": ["string", "null"],
+      "minLength": 1
+    }
+  }
+}

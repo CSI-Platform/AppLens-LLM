@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from applens_llm.bench import run_openai_chat_benchmark
+from applens_llm.capture_ingest import write_capture_records_jsonl
 from applens_llm.eval import evaluate_training_examples_file, write_eval_report
 from applens_llm.schemas import SchemaValidationError, validate_document, validate_jsonl_file
 
@@ -39,6 +40,10 @@ def main(argv: list[str] | None = None) -> int:
             report = evaluate_training_examples_file(args.examples)
             write_eval_report(report, args.output)
             print(f"{report['scores']['passed']}/{report['total']} pass -> {args.output}")
+            return 0
+        if args.command == "ingest-captures":
+            count = write_capture_records_jsonl(args.source, args.output)
+            print(f"{count} capture records -> {args.output}")
             return 0
     except SchemaValidationError as exc:
         print(f"schema error: {exc}")
@@ -77,6 +82,10 @@ def _build_parser() -> argparse.ArgumentParser:
     eval_parser = subparsers.add_parser("eval")
     eval_parser.add_argument("--examples", type=Path, required=True)
     eval_parser.add_argument("--output", type=Path, default=Path("out/eval-report.json"))
+
+    ingest = subparsers.add_parser("ingest-captures")
+    ingest.add_argument("--source", type=Path, required=True)
+    ingest.add_argument("--output", type=Path, default=Path("data/raw/capture-records.jsonl"))
 
     return parser
 

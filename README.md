@@ -9,6 +9,7 @@ It turns AppLens/AppLens-Tune machine evidence, workload goals, and benchmark re
 - Strict schemas for deployment plans, benchmark records, and training examples.
 - Seed data for the first AppLens-Tailor training target.
 - A validation CLI for JSON and JSONL artifacts.
+- A capture ingestion CLI for AppLens `.md` reports and legacy `.txt` reports.
 - An OpenAI-compatible benchmark runner for Jan, llama.cpp, and similar local endpoints.
 - Roadmap and architecture docs for the AppLens-LLM extension.
 
@@ -30,6 +31,7 @@ uv sync --dev
 uv run pytest
 uv run applens-llm validate-jsonl --schema training-example data/examples.seed.jsonl
 uv run applens-llm validate-jsonl --schema machine-profile data/machines.seed.jsonl
+uv run applens-llm ingest-captures --source ../AppLens/raw --output data/raw/capture-records.jsonl
 uv run applens-llm eval --examples data/examples.seed.jsonl --output out/eval-report.json
 ```
 

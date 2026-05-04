@@ -32,6 +32,17 @@ The first eval checks:
 
 Machine profiles require a broad `model` plus exact `sku`. The SKU is the key for separating hardware variants that share a marketing name.
 
+## Ingest AppLens Captures
+
+Keep raw capture manifests under ignored `data/raw/`:
+
+```powershell
+uv run applens-llm ingest-captures --source ../AppLens/raw --output data/raw/capture-records.jsonl
+uv run applens-llm validate-jsonl --schema capture-record data/raw/capture-records.jsonl
+```
+
+The ingester accepts the current `.md` reports and legacy `.txt` reports. It creates a review manifest only; it does not promote raw reports into tracked training data.
+
 ## Run A Local Endpoint Benchmark
 
 Jan defaults to `http://127.0.0.1:1337/v1`:

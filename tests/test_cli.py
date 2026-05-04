@@ -39,3 +39,23 @@ def test_cli_validates_jsonl_file() -> None:
 
     assert result.returncode == 0
     assert "rows valid" in result.stdout
+
+
+def test_cli_ingests_capture_reports(tmp_path: Path) -> None:
+    (tmp_path / "AppLens_Results_cli-host.md").write_text(
+        "# AppLens Scan Results\n- **Computer:** cli-host\n",
+        encoding="utf-8",
+    )
+    output = tmp_path / "captures.jsonl"
+
+    result = run_cli(
+        "ingest-captures",
+        "--source",
+        str(tmp_path),
+        "--output",
+        str(output),
+    )
+
+    assert result.returncode == 0
+    assert "1 capture records" in result.stdout
+    assert output.exists()

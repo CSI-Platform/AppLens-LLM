@@ -17,6 +17,7 @@ SCHEMA_NAMES = (
     "training-example",
     "eval-report",
     "machine-profile",
+    "capture-record",
 )
 
 
