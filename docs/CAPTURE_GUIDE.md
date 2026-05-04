@@ -56,6 +56,12 @@ Promote only:
 
 The eval set should prefer real machines. Synthetic examples should fill missing edge cases after real coverage exists.
 
+## Capture Backlog
+
+- Add Markdown report export to the AppLens script bundle. Keep `.txt` as the raw fallback, but prefer `.md` for curated AppLens-LLM training intake because section headings, tables, and bullets are easier to review and parse.
+- Add JSON export after Markdown. JSON should become the best machine-readable format for schema-backed training and eval generation.
+- First target: promote 5 real AppLens reports into sanitized machine profiles and training/eval candidates.
+
 ## SKU Capture
 
 Capture SKU separately from model. `model` can remain a broad family like `XPS` or `EliteBook`; `sku` should identify the specific verified hardware variant.

@@ -10,10 +10,12 @@
 
 ## Milestone 1: Eval Harness
 
+- Convert the first 5 real AppLens reports into sanitized eval candidates.
 - Build a baseline eval set of 50 to 100 examples.
 - Score schema validity, policy agreement, runtime fit, and benchmark grounding.
 - Run Qwen3.5-2B zero-shot and few-shot baselines before training.
 - Track every eval report under ignored `out/` until promoted.
+- Backlog: add Markdown export to AppLens scripts, followed by JSON export for schema-backed dataset generation.
 
 ## Milestone 2: AppLens-Tailor LoRA
 
