@@ -20,6 +20,7 @@ For every machine, collect:
 - sanitized AppLens report
 - sanitized AppLens-Tune report
 - local AI readiness profile
+- vendor, model, and exact SKU/product number
 - GPU/VRAM/RAM/CPU/storage summary
 - one small local inference benchmark when practical
 - failure notes for OOM, missing CUDA, thermal throttling, or unsupported runtime
@@ -54,3 +55,29 @@ Promote only:
 - brief notes that explain failures or policy gates
 
 The eval set should prefer real machines. Synthetic examples should fill missing edge cases after real coverage exists.
+
+## SKU Capture
+
+Capture SKU separately from model. `model` can remain a broad family like `XPS` or `EliteBook`; `sku` should identify the specific verified hardware variant.
+
+Windows examples:
+
+```powershell
+Get-CimInstance Win32_ComputerSystem | Select-Object Manufacturer,Model,SystemSKUNumber
+Get-CimInstance Win32_ComputerSystemProduct | Select-Object Vendor,Name,Version,IdentifyingNumber,UUID
+```
+
+Linux examples:
+
+```bash
+sudo dmidecode -s system-sku-number
+sudo dmidecode -s system-product-name
+```
+
+macOS examples:
+
+```bash
+system_profiler SPHardwareDataType
+```
+
+Use the Mac model identifier as the SKU equivalent when Apple does not expose a normal OEM SKU.

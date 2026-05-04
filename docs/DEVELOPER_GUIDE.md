@@ -30,6 +30,8 @@ The first eval checks:
 - runtime fields match expected labels
 - core expected fields match expected labels
 
+Machine profiles require a broad `model` plus exact `sku`. The SKU is the key for separating hardware variants that share a marketing name.
+
 ## Run A Local Endpoint Benchmark
 
 Jan defaults to `http://127.0.0.1:1337/v1`:

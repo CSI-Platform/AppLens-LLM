@@ -34,10 +34,11 @@
     "platform": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["vendor", "model", "os_family", "cpu", "ram_gb", "gpu", "vram_mb"],
+      "required": ["vendor", "model", "sku", "os_family", "cpu", "ram_gb", "gpu", "vram_mb"],
       "properties": {
         "vendor": { "type": "string", "minLength": 1 },
         "model": { "type": "string", "minLength": 1 },
+        "sku": { "type": "string", "minLength": 1 },
         "os_family": {
           "type": "string",
           "enum": ["windows", "linux", "macos", "unknown"]

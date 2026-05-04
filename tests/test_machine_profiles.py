@@ -23,3 +23,14 @@ def test_machine_profiles_cover_major_target_roles() -> None:
     roles = {role for row in rows for role in row["target_roles"]}
 
     assert {"training_candidate", "serving_candidate", "cpu_baseline", "mac_baseline"} <= roles
+
+
+def test_machine_profiles_track_sku_separately_from_model_label() -> None:
+    rows = validate_jsonl_file("machine-profile", ROOT / "data" / "machines.seed.jsonl")
+
+    assert all(row["platform"]["sku"] for row in rows)
+    assert all(
+        row["platform"]["sku"] != "unknown"
+        for row in rows
+        if row["capture_status"] == "captured_sanitized"
+    )
