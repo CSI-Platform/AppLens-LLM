@@ -11,7 +11,7 @@ Use this guide to turn each available machine into a clean AppLens-LLM training 
 5. HP laptop: consumer laptop baseline.
 6. Lenovo laptop: vendor diversity.
 7. Old MacBook: macOS baseline, best effort.
-8. Gaming PC: paused because disk space is too low for AppLens capture. It remains useful as an existing llama.cpp CUDA-MMQ serving benchmark.
+8. Gaming PC: raw AppLens/AppLens-Tune reports captured over SSH using `/dev/shm` because disk space is full. Sanitize before promoting into training/eval data.
 
 ## Per-Machine Checklist
 
