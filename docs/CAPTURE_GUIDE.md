@@ -4,8 +4,8 @@ Use this guide to turn each available machine into a clean AppLens-LLM training 
 
 ## Priority Order
 
-1. ASUS laptop: likely best training candidate if it is the RTX 4050 machine.
-2. HP ZBook: workstation-class sample and likely strong local AI candidate.
+1. ASUS ProArt PX13: raw AppLens/AppLens-Tune reports captured. Next step is AppLens-Bench.
+2. HP ZBook: AppLens report captured, AppLens-Tune still needs a run log or fixed runner retry.
 3. Dell XPS: thin laptop and CPU/iGPU baseline.
 4. HP EliteBook: business laptop and conservative policy baseline.
 5. HP laptop: consumer laptop baseline.
