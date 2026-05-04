@@ -4,14 +4,14 @@ Use this guide to turn each available machine into a clean AppLens-LLM training 
 
 ## Priority Order
 
-1. Gaming PC: already benchmarked with llama.cpp; capture fresh AppLens/AppLens-Tune reports next.
-2. ASUS laptop: likely best training candidate if it is the RTX 4050 machine.
-3. HP ZBook: workstation-class sample and likely strong local AI candidate.
-4. Dell XPS: thin laptop and CPU/iGPU baseline.
-5. HP EliteBook: business laptop and conservative policy baseline.
-6. HP laptop: consumer laptop baseline.
-7. Lenovo laptop: vendor diversity.
-8. Old MacBook: macOS baseline, best effort.
+1. ASUS laptop: likely best training candidate if it is the RTX 4050 machine.
+2. HP ZBook: workstation-class sample and likely strong local AI candidate.
+3. Dell XPS: thin laptop and CPU/iGPU baseline.
+4. HP EliteBook: business laptop and conservative policy baseline.
+5. HP laptop: consumer laptop baseline.
+6. Lenovo laptop: vendor diversity.
+7. Old MacBook: macOS baseline, best effort.
+8. Gaming PC: paused because disk space is too low for AppLens capture. It remains useful as an existing llama.cpp CUDA-MMQ serving benchmark.
 
 ## Per-Machine Checklist
 
