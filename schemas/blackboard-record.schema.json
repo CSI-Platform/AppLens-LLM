@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://csi-platform.local/applens-llm/blackboard-record.schema.json",
+  "title": "AppLens-LLM Blackboard Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "experiment_id",
+    "event_type",
+    "created_at",
+    "payload",
+    "privacy"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "event_id": {
+      "type": "string",
+      "pattern": "^evt-[a-zA-Z0-9-]+$"
+    },
+    "experiment_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]*$"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "experiment_started",
+        "task",
+        "model_response",
+        "handoff",
+        "benchmark_reference",
+        "failure",
+        "verdict"
+      ]
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit_safe", "local_paths_included"],
+      "properties": {
+        "commit_safe": { "type": "boolean" },
+        "local_paths_included": { "type": "boolean" }
+      }
+    }
+  }
+}

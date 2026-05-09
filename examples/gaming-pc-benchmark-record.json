@@ -3,19 +3,80 @@
   "run_id": "gaming-pc-qwen25-7b-cuda-mmq-applens-eval-20260503",
   "created_at": "2026-05-03T19:13:34Z",
   "host": {
-    "name": "cody-System-Product-Name",
+    "name": "gaming-pc-sanitized",
     "os": "Ubuntu 24.04.4 LTS",
     "gpu": "NVIDIA GeForce GTX 1660 SUPER",
-    "vram_mb": 6144
+    "vram_mb": 6144,
+    "driver_evidence": [
+      {
+        "vendor": "nvidia",
+        "device_name": "NVIDIA GeForce GTX 1660 SUPER",
+        "driver_version": "unknown",
+        "driver_branch": "unknown",
+        "branch_confidence": "unknown",
+        "version_source": "sanitized-example",
+        "branch_source": "not-recorded",
+        "benchmark_invalidates_on_change": true
+      }
+    ],
+    "hardware_topology": {
+      "accelerators": [
+        {
+          "accelerator_id": "nvidia-dgpu-0",
+          "kind": "nvidia_dgpu",
+          "vendor": "nvidia",
+          "name": "NVIDIA GeForce GTX 1660 SUPER",
+          "present": true,
+          "api_support": ["cuda", "vulkan"],
+          "memory": {
+            "physical_dedicated_vram_mb": 6144,
+            "vgm_reserved_mb": 0,
+            "shared_graphics_memory_mb": 0,
+            "reported_total_graphics_memory_mb": 6144,
+            "estimated_usable_inference_memory_mb": 6144,
+            "confidence": "observed"
+          },
+          "verification": [
+            {
+              "source_type": "command",
+              "command": "nvidia-smi --query-gpu=name,memory.total --format=csv",
+              "notes": "Sanitized NVIDIA inventory from the benchmark host."
+            }
+          ]
+        }
+      ],
+      "usable_inference_capacity": {
+        "estimated_usable_memory_mb": 6144,
+        "confidence": "observed",
+        "preferred_accelerator_ids": ["nvidia-dgpu-0"],
+        "mixed_device_pooling": "not_applicable",
+        "verification": [
+          {
+            "source_type": "benchmark",
+            "command": "llama-server -m models/qwen2.5-7b-ollama.gguf -ngl 99",
+            "notes": "Single CUDA device completed the benchmark without fallback."
+          }
+        ]
+      },
+      "memory_claims": []
+    }
   },
   "runtime": {
-    "backend": "llama.cpp",
+    "engine": "llama.cpp",
+    "backend": "cuda",
     "build": "build-cuda-mmq d05fe1d",
-    "command": "llama-server -m qwen2.5-7b-ollama.gguf -ngl 99 -t 8 -c 4096 --parallel 1 --host 127.0.0.1 --port 8080"
+    "command": "llama-server -m models/qwen2.5-7b-ollama.gguf -ngl 99 -t 8 -c 4096 --parallel 1 --host 127.0.0.1 --port 8080",
+    "devices_used": ["nvidia-dgpu-0"],
+    "mixed_device_offload": {
+      "attempted": false,
+      "worked": false,
+      "strategy": "single_device",
+      "notes": "The benchmark used one CUDA device."
+    }
   },
   "model": {
     "name": "qwen2.5:7b",
-    "path": "/home/cody/local-llm/models/qwen2.5-7b-ollama.gguf",
+    "path": "models/qwen2.5-7b-ollama.gguf",
     "quantization": "Q4_K_M GGUF"
   },
   "workload": {
@@ -27,10 +88,20 @@
     "generation_tokens_per_second": 44.57,
     "latency_ms": 3341,
     "vram_used_mb": 5329,
+    "device_memory_used_mb": [
+      {
+        "accelerator_id": "nvidia-dgpu-0",
+        "used_mb": 5329
+      }
+    ],
+    "cpu_spill_mb": 0,
+    "thermal_notes": "Short benchmark held the GPU near the observed temperature without thermal throttling.",
     "temperature_c": 52
   },
   "outcome": {
     "status": "pass",
+    "fallback_occurred": false,
+    "failure_modes": ["none"],
     "notes": "Tiny AppLens-Tune summary eval completed through llama.cpp OpenAI-compatible endpoint."
   }
 }

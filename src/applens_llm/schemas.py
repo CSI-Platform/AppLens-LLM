@@ -12,6 +12,9 @@ from applens_llm.paths import repo_root
 
 
 SCHEMA_NAMES = (
+    "hardware-topology",
+    "runtime-lanes",
+    "blackboard-record",
     "deployment-plan",
     "benchmark-record",
     "training-example",

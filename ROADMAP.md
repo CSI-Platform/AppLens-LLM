@@ -4,6 +4,7 @@
 
 - Create standalone AppLens-LLM repo.
 - Track deployment, benchmark, and training schemas.
+- Track hardware topology, accelerator memory claims, and proven usable inference capacity.
 - Add seed examples from the gaming PC and policy contrast cases.
 - Add schema validation CLI and tests.
 - Add OpenAI-compatible benchmark record generation.
@@ -11,6 +12,7 @@
 ## Milestone 1: Eval Harness
 
 - Convert the first 5 real AppLens reports into sanitized eval candidates.
+- Add benchmark-backed eval cases for hybrid GPU/iGPU/NPU systems where advertised memory differs from usable local inference capacity.
 - Build a baseline eval set of 50 to 100 examples.
 - Score schema validity, policy agreement, runtime fit, and benchmark grounding.
 - Run Qwen3.5-2B zero-shot and few-shot baselines before training.

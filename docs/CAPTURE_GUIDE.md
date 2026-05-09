@@ -22,10 +22,15 @@ For every machine, collect:
 - local AI readiness profile
 - vendor, model, and exact SKU/product number
 - GPU/VRAM/RAM/CPU/storage summary
+- hardware topology with separate accelerator rows for dGPU, iGPU, NPU, and CPU fallback when useful
+- memory evidence per accelerator: physical dedicated VRAM, VGM or reserved memory, shared graphics memory, reported total graphics memory, estimated usable inference memory, confidence, and source
 - one small local inference benchmark when practical
-- failure notes for OOM, missing CUDA, thermal throttling, or unsupported runtime
+- benchmark proof fields: backend, devices used, mixed-device offload, tokens/sec, OOM/fallback/crash, CPU spill, and thermal notes
+- telemetry source notes, especially AMD Software: Adrenalin Edition logs for Radeon/VGM benchmark runs
 
 Do not collect browser history, tokens, SSH keys, user files, raw application data, client documents, or private paths unless they are manually redacted.
+
+Do not promote serial numbers, UUIDs, raw adapter device IDs, or user-specific local paths into committed examples. Use stable sanitized identifiers such as `nvidia-dgpu-0`, `amd-igpu-0`, and `cpu-0`.
 
 ## AppLens-LLM Bench Targets
 
@@ -35,6 +40,7 @@ For GPU-capable Windows/Linux machines:
 - llama.cpp endpoint on localhost if already installed
 - small model smoke test first
 - context sweep only after the smoke test passes
+- run separate backend checks when hardware is hybrid, such as CUDA for NVIDIA, Vulkan or DirectML for Windows iGPU paths, and CPU fallback
 
 For CPU-only or weak machines:
 
@@ -60,6 +66,10 @@ Promote only:
 - benchmark records with no private paths
 - brief notes that explain failures or policy gates
 
+For advertised or reserved graphics memory claims, promote both the claim and the verification status. A claim like "RTX VRAM plus AMD VGM creates a 22 GB pool" stays `user_claimed` and unproven or partially verified until a benchmark proves the runtime actually used the relevant devices together.
+
+When AMD Software logs are used, promote only summarized metrics or sanitized `telemetry_sources` references. Raw CSV logs remain local-only unless manually scrubbed.
+
 The eval set should prefer real machines. Synthetic examples should fill missing edge cases after real coverage exists.
 
 ## Capture Backlog
@@ -77,8 +87,10 @@ Windows examples:
 
 ```powershell
 Get-CimInstance Win32_ComputerSystem | Select-Object Manufacturer,Model,SystemSKUNumber
-Get-CimInstance Win32_ComputerSystemProduct | Select-Object Vendor,Name,Version,IdentifyingNumber,UUID
+Get-CimInstance Win32_ComputerSystemProduct | Select-Object Vendor,Name,Version
 ```
+
+Do not promote `IdentifyingNumber`, UUID, serial number, PNP device ID, or adapter LUID fields.
 
 Linux examples:
 

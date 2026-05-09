@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://csi-platform.local/applens-llm/hardware-topology.schema.json",
+  "title": "AppLens-LLM Hardware Topology",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["accelerators", "usable_inference_capacity", "memory_claims"],
+  "properties": {
+    "accelerators": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/accelerator" }
+    },
+    "usable_inference_capacity": { "$ref": "#/$defs/usable_inference_capacity" },
+    "memory_claims": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/memory_claim" }
+    }
+  },
+  "$defs": {
+    "accelerator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "accelerator_id",
+        "kind",
+        "vendor",
+        "name",
+        "present",
+        "api_support",
+        "memory",
+        "verification"
+      ],
+      "properties": {
+        "accelerator_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "nvidia_dgpu",
+            "amd_dgpu",
+            "amd_igpu",
+            "intel_igpu",
+            "apple_gpu",
+            "npu",
+            "cpu",
+            "unknown"
+          ]
+        },
+        "vendor": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "present": { "type": "boolean" },
+        "api_support": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "cuda",
+              "vulkan",
+              "rocm",
+              "hip",
+              "directml",
+              "metal",
+              "openvino",
+              "cpu",
+              "npu",
+              "xdna",
+              "unknown"
+            ]
+          }
+        },
+        "memory": { "$ref": "#/$defs/accelerator_memory" },
+        "verification": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/verification" }
+        }
+      }
+    },
+    "accelerator_memory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "physical_dedicated_vram_mb",
+        "vgm_reserved_mb",
+        "shared_graphics_memory_mb",
+        "reported_total_graphics_memory_mb",
+        "estimated_usable_inference_memory_mb",
+        "confidence"
+      ],
+      "properties": {
+        "physical_dedicated_vram_mb": { "type": "integer", "minimum": 0 },
+        "vgm_reserved_mb": { "type": "integer", "minimum": 0 },
+        "shared_graphics_memory_mb": { "type": "integer", "minimum": 0 },
+        "reported_total_graphics_memory_mb": { "type": "integer", "minimum": 0 },
+        "estimated_usable_inference_memory_mb": { "type": "integer", "minimum": 0 },
+        "confidence": { "$ref": "#/$defs/confidence" }
+      }
+    },
+    "usable_inference_capacity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "estimated_usable_memory_mb",
+        "confidence",
+        "preferred_accelerator_ids",
+        "mixed_device_pooling",
+        "verification"
+      ],
+      "properties": {
+        "estimated_usable_memory_mb": { "type": "integer", "minimum": 0 },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "preferred_accelerator_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          }
+        },
+        "mixed_device_pooling": {
+          "type": "string",
+          "enum": [
+            "not_applicable",
+            "not_supported",
+            "unverified",
+            "partially_verified",
+            "verified",
+            "failed"
+          ]
+        },
+        "verification": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/verification" }
+        }
+      }
+    },
+    "memory_claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claim_id",
+        "description",
+        "claimed_total_memory_mb",
+        "confidence",
+        "status",
+        "verification"
+      ],
+      "properties": {
+        "claim_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "description": { "type": "string", "minLength": 1 },
+        "claimed_total_memory_mb": { "type": "integer", "minimum": 0 },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "status": {
+          "type": "string",
+          "enum": ["unverified", "partially_verified", "verified", "rejected"]
+        },
+        "verification": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/verification" }
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_type", "notes"],
+      "properties": {
+        "source_type": {
+          "type": "string",
+          "enum": ["command", "benchmark", "vendor_doc", "user_claim", "inventory"]
+        },
+        "command": { "type": "string" },
+        "source": { "type": "string" },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string", "minLength": 1 }
+      }
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["observed", "inferred", "user_claimed"]
+    }
+  }
+}

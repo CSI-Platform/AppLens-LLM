@@ -1,0 +1,55 @@
+{
+  "schema_version": "0.1",
+  "lanes": [
+    {
+      "lane_id": "fast-nvidia",
+      "role": "fast",
+      "engine": "llama.cpp",
+      "backend": "cuda",
+      "endpoint": "http://127.0.0.1:18081/v1",
+      "model": {
+        "label": "jan-v35-4b-q4",
+        "path": "models/jan-v35-4b-q4.gguf",
+        "quantization": "Q4_K_XL GGUF",
+        "context_tokens": 4096
+      },
+      "device": {
+        "selector": "cuda:0",
+        "accelerator_ids": ["nvidia-dgpu-0"]
+      },
+      "launch": {
+        "server_binary": "llama-server",
+        "context_tokens": 4096,
+        "gpu_layers": 99,
+        "threads": 12,
+        "environment": {}
+      }
+    },
+    {
+      "lane_id": "deep-amd-vgm",
+      "role": "deep",
+      "engine": "llama.cpp",
+      "backend": "vulkan",
+      "endpoint": "http://127.0.0.1:18082/v1",
+      "model": {
+        "label": "qwen-27b-iq3",
+        "path": "models/qwen-27b-iq3.gguf",
+        "quantization": "IQ3 GGUF",
+        "context_tokens": 4096
+      },
+      "device": {
+        "selector": "Vulkan0",
+        "accelerator_ids": ["amd-igpu-0"]
+      },
+      "launch": {
+        "server_binary": "llama-server",
+        "context_tokens": 4096,
+        "gpu_layers": 99,
+        "threads": 12,
+        "environment": {
+          "GGML_VK_DISABLE_COOPMAT": "1"
+        }
+      }
+    }
+  ]
+}

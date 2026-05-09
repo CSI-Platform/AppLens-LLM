@@ -22,22 +22,59 @@
     "host": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "os", "gpu", "vram_mb"],
+      "required": ["name", "os", "gpu", "vram_mb", "hardware_topology"],
       "properties": {
         "name": { "type": "string" },
         "os": { "type": "string" },
         "gpu": { "type": "string" },
-        "vram_mb": { "type": "integer", "minimum": 0 }
+        "vram_mb": { "type": "integer", "minimum": 0 },
+        "driver_evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/driver_evidence" }
+        },
+        "hardware_topology": {
+          "$ref": "https://csi-platform.local/applens-llm/hardware-topology.schema.json"
+        }
       }
     },
     "runtime": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["backend", "build", "command"],
+      "required": ["engine", "backend", "build", "command", "devices_used", "mixed_device_offload"],
       "properties": {
-        "backend": { "type": "string" },
+        "engine": {
+          "type": "string",
+          "enum": ["llama.cpp", "ollama", "jan", "lm_studio", "vllm", "sglang", "transformers", "unknown"]
+        },
+        "backend": {
+          "type": "string",
+          "enum": ["cuda", "vulkan", "rocm", "hip", "directml", "metal", "openvino", "cpu", "npu", "mixed", "unknown"]
+        },
         "build": { "type": "string" },
-        "command": { "type": "string" }
+        "command": { "type": "string" },
+        "devices_used": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          }
+        },
+        "mixed_device_offload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["attempted", "worked", "strategy", "notes"],
+          "properties": {
+            "attempted": { "type": "boolean" },
+            "worked": { "type": "boolean" },
+            "strategy": {
+              "type": "string",
+              "enum": ["none", "single_device", "layer_split", "tensor_split", "priority_order", "runtime_default", "unknown"]
+            },
+            "notes": { "type": "string" }
+          }
+        }
       }
     },
     "model": {
@@ -62,22 +99,134 @@
     "metrics": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["prompt_tokens_per_second", "generation_tokens_per_second", "latency_ms", "vram_used_mb"],
+      "required": [
+        "prompt_tokens_per_second",
+        "generation_tokens_per_second",
+        "latency_ms",
+        "vram_used_mb",
+        "device_memory_used_mb",
+        "cpu_spill_mb",
+        "thermal_notes"
+      ],
       "properties": {
         "prompt_tokens_per_second": { "type": "number", "minimum": 0 },
         "generation_tokens_per_second": { "type": "number", "minimum": 0 },
         "latency_ms": { "type": "number", "minimum": 0 },
         "vram_used_mb": { "type": "integer", "minimum": 0 },
+        "device_memory_used_mb": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["accelerator_id", "used_mb"],
+            "properties": {
+              "accelerator_id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*$"
+              },
+              "used_mb": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "cpu_spill_mb": { "type": "integer", "minimum": 0 },
+        "thermal_notes": { "type": "string" },
         "temperature_c": { "type": "integer", "minimum": 0 }
       }
     },
     "outcome": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["status", "notes"],
+      "required": ["status", "fallback_occurred", "failure_modes", "notes"],
       "properties": {
-        "status": { "type": "string", "enum": ["pass", "fail", "oom", "timeout", "crash"] },
+        "status": { "type": "string", "enum": ["pass", "fail", "oom", "timeout", "crash", "fallback"] },
+        "fallback_occurred": { "type": "boolean" },
+        "failure_modes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["none", "oom", "fallback", "crash", "timeout", "cpu_spill", "thermal_throttle", "backend_missing", "unsupported_device"]
+          }
+        },
         "notes": { "type": "string" }
+      }
+    },
+    "telemetry_sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source", "sampling_interval_seconds", "metrics", "notes"],
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": ["amd_adrenalin", "nvidia_smi", "windows_performance_counter", "runtime_log", "manual_observation"]
+          },
+          "sampling_interval_seconds": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "metrics": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "gpu_utilization",
+                "gpu_clock_speed",
+                "gpu_power_watts",
+                "gpu_temperature_c",
+                "gpu_junction_temperature_c",
+                "gpu_fan_speed_rpm",
+                "gpu_memory_utilization_mb",
+                "gpu_memory_clock_speed",
+                "cpu_utilization",
+                "cpu_frequency_ghz",
+                "cpu_temperature_c",
+                "cpu_power_watts",
+                "system_memory_utilization_gb",
+                "runtime_backend",
+                "tokens_per_second"
+              ]
+            }
+          },
+          "path": { "type": "string" },
+          "notes": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "driver_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "vendor",
+        "device_name",
+        "driver_version",
+        "driver_branch",
+        "branch_confidence",
+        "version_source",
+        "branch_source",
+        "benchmark_invalidates_on_change"
+      ],
+      "properties": {
+        "vendor": { "type": "string", "minLength": 1 },
+        "device_name": { "type": "string", "minLength": 1 },
+        "driver_version": { "type": "string", "minLength": 1 },
+        "driver_branch": {
+          "type": "string",
+          "enum": ["game_ready", "studio", "oem", "enterprise", "pro", "adrenalin", "windows_update", "unknown"]
+        },
+        "branch_confidence": {
+          "type": "string",
+          "enum": ["observed", "inferred", "user_confirmed", "unknown"]
+        },
+        "version_source": { "type": "string", "minLength": 1 },
+        "branch_source": { "type": "string", "minLength": 1 },
+        "benchmark_invalidates_on_change": { "type": "boolean" }
       }
     }
   }

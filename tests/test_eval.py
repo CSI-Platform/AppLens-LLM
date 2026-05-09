@@ -15,12 +15,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_seed_examples_score_as_passing_eval_set() -> None:
     report = evaluate_training_examples_file(ROOT / "data" / "examples.seed.jsonl")
+    expected_total = len(_load_seed_rows())
 
     validate_payload("eval-report", report)
-    assert report["total"] == 2
-    assert report["scores"]["schema_valid"] == 2
-    assert report["scores"]["policy_valid"] == 2
-    assert report["scores"]["expected_match"] == 2
+    assert report["total"] == expected_total
+    assert report["scores"]["schema_valid"] == expected_total
+    assert report["scores"]["policy_valid"] == expected_total
+    assert report["scores"]["expected_match"] == expected_total
     assert report["scores"]["pass_rate"] == 1
 
 
@@ -59,7 +60,8 @@ def test_eval_cli_writes_report(tmp_path: Path) -> None:
     )
 
     assert result.returncode == 0
-    assert "2/2 pass" in result.stdout
+    expected_total = len(_load_seed_rows())
+    assert f"{expected_total}/{expected_total} pass" in result.stdout
     validate_payload("eval-report", json.loads(output.read_text(encoding="utf-8")))
 
 

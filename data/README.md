@@ -7,3 +7,5 @@ Tracked data should be small, reviewed, and free of private user paths, tokens, 
 The first target format is JSONL where each line matches `schemas/training-example.schema.json`.
 
 Machine capture planning lives in `machines.seed.jsonl`, where each line matches `schemas/machine-profile.schema.json`.
+
+Machine rows must include `hardware_topology` so training data can distinguish reported graphics capacity, memory claims, and benchmark-proven usable inference capacity.

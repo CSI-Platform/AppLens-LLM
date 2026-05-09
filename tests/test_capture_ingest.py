@@ -15,7 +15,7 @@ def test_discover_capture_records_prefers_markdown_reports(tmp_path: Path) -> No
             [
                 "# AppLens Scan Results",
                 "- **Computer:** TEST-PC",
-                "- **User:** cody",
+                "- **User:** test-user",
                 "- **OS:** Microsoft Windows 11 Home (10.0.26200)",
                 "- **Scan Date:** 2026-05-03",
                 "",
@@ -30,7 +30,7 @@ def test_discover_capture_records_prefers_markdown_reports(tmp_path: Path) -> No
             [
                 "# AppLens-Tune Audit Results",
                 "- **Computer:** TEST-PC",
-                "- **User:** cody",
+                "- **User:** test-user",
                 "- **Scan Date:** 2026-05-03 20:06:03",
                 "- **Mode:** Audit (read-only)",
                 "",
@@ -74,7 +74,7 @@ def test_discover_capture_records_accepts_legacy_txt_reports(tmp_path: Path) -> 
             [
                 "=== AppLens Scan Results ===",
                 "Computer: legacy-host",
-                "User: cody",
+                "User: test-user",
                 "OS: Linux-6.17.0-14-generic-x86_64-with-glibc2.39",
                 "Scan Date: 2026-05-03",
                 "",
@@ -88,7 +88,7 @@ def test_discover_capture_records_accepts_legacy_txt_reports(tmp_path: Path) -> 
             [
                 "=== AppLens-Tune Audit Results ===",
                 "Computer: legacy-host",
-                "User: cody",
+                "User: test-user",
                 "Scan Date: 2026-05-03 19:07:35",
                 "Mode: Audit (read-only)",
                 "",
