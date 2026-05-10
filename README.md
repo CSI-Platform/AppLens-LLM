@@ -13,6 +13,7 @@ It turns AppLens/AppLens-Tune machine evidence, workload goals, and benchmark re
 - A capture ingestion CLI for AppLens `.md` reports and legacy `.txt` reports.
 - An OpenAI-compatible benchmark runner for Jan, llama.cpp, and similar local endpoints.
 - A blackboard-backed runtime orchestrator for comparing portable local model lanes.
+- A `fit-report` artifact that turns machine profiles and benchmark evidence into a deployment-fit recommendation.
 - Roadmap and architecture docs for the AppLens-LLM extension.
 
 ## Current Training Target
@@ -33,6 +34,7 @@ uv sync --dev
 uv run pytest
 uv run applens-llm validate-jsonl --schema training-example data/examples.seed.jsonl
 uv run applens-llm validate-jsonl --schema machine-profile data/machines.seed.jsonl
+uv run applens-llm validate --schema fit-report examples/asus-px13-fit-report.example.json
 uv run applens-llm ingest-captures --source ../AppLens/raw --output data/raw/capture-records.jsonl
 uv run applens-llm eval --examples data/examples.seed.jsonl --output out/eval-report.json
 uv run applens-llm vgm-snapshot --label before-vgm --output out/vgm/before-vgm.json
@@ -80,6 +82,16 @@ uv run applens-llm experiment-compare --baseline out/blackboard/exp-game-ready-s
 Committed lane examples must stay sanitized. Put machine-specific binaries, local model paths, and raw run evidence under ignored `out/`.
 
 Driver branch is runtime evidence. NVIDIA describes Game Ready drivers as game-focused and Studio drivers as reliability-focused for creative workflows; both can run games and creative apps. AppLens records the branch reported by the user plus the version from `nvidia-smi`, and a branch or version change means benchmark comparisons should be rerun instead of treated as equivalent.
+
+## Fit Reports
+
+`fit-report` is the product-facing artifact. It reads a machine profile plus optional benchmark records, experiment summaries, and experiment comparisons, then writes one JSON recommendation:
+
+```powershell
+uv run applens-llm fit-report --machine-profile data/machines.seed.jsonl --machine-id asus-laptop --experiment-summary out/blackboard/exp-studio-summary.json --experiment-comparison out/blackboard/driver-comparison.json --output out/fit-reports/asus-px13-local-fit.json
+```
+
+The report summarizes local fit class, proven lanes, unsupported memory claims, runtime strategy, model guidance, decisions, and next benchmarks. Generated reports belong under ignored `out/`; committed examples must stay sanitized.
 
 ## Hardware Memory Rule
 

@@ -12,6 +12,7 @@ from applens_llm.driver_evidence import collect_nvidia_driver_evidence
 from applens_llm.eval import evaluate_training_examples_file, write_eval_report
 from applens_llm.experiment_compare import write_experiment_comparison
 from applens_llm.experiments import run_two_lane_experiment
+from applens_llm.fit_report import write_fit_report
 from applens_llm.lane_processes import build_server_command, start_lane, stop_lane
 from applens_llm.llamacpp_probe import run_llamacpp_bench, write_llamacpp_devices
 from applens_llm.orchestrator import run_lane_once
@@ -224,6 +225,22 @@ def main(argv: list[str] | None = None) -> int:
                 f"verdict={comparison['verdict']}"
             )
             return 0
+        if args.command == "fit-report":
+            report = write_fit_report(
+                machine_profile_path=args.machine_profile,
+                machine_id=args.machine_id,
+                output_path=args.output,
+                benchmark_record_paths=args.benchmark_record,
+                experiment_summary_paths=args.experiment_summary,
+                experiment_comparison_paths=args.experiment_comparison,
+                report_id=args.report_id,
+            )
+            print(
+                f"fit report {report['report_id']} -> {args.output}; "
+                f"class={report['fit']['class']}; "
+                f"strategy={report['runtime_recommendation']['strategy']}"
+            )
+            return 0
     except SchemaValidationError as exc:
         print(f"schema error: {exc}")
         return 2
@@ -373,6 +390,15 @@ def _build_parser() -> argparse.ArgumentParser:
     experiment_compare.add_argument("--baseline", type=Path, required=True)
     experiment_compare.add_argument("--candidate", type=Path, required=True)
     experiment_compare.add_argument("--output", type=Path, required=True)
+
+    fit_report = subparsers.add_parser("fit-report")
+    fit_report.add_argument("--machine-profile", type=Path, required=True)
+    fit_report.add_argument("--machine-id")
+    fit_report.add_argument("--benchmark-record", type=Path, action="append", default=[])
+    fit_report.add_argument("--experiment-summary", type=Path, action="append", default=[])
+    fit_report.add_argument("--experiment-comparison", type=Path, action="append", default=[])
+    fit_report.add_argument("--report-id")
+    fit_report.add_argument("--output", type=Path, required=True)
 
     return parser
 

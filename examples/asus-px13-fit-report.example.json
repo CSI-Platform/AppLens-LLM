@@ -1,0 +1,200 @@
+{
+  "capacity_assessment": {
+    "mixed_device_pooling": "unverified",
+    "profile_confidence": "inferred",
+    "profile_estimated_usable_memory_mb": 6144,
+    "proven_lanes": [
+      {
+        "accelerator_ids": [
+          "amd-igpu-0"
+        ],
+        "backend": "vulkan",
+        "lane_id": "deep-amd-vgm",
+        "latency_ms": 21690,
+        "model_label": "qwen-27b-iq3",
+        "outcome": "success",
+        "total_tokens": 273
+      },
+      {
+        "accelerator_ids": [
+          "nvidia-dgpu-0"
+        ],
+        "backend": "cuda",
+        "lane_id": "fast-nvidia",
+        "latency_ms": 2037,
+        "model_label": "jan-v35-4b-q4",
+        "outcome": "success",
+        "total_tokens": 133
+      }
+    ],
+    "reported_summary_vram_mb": 6144,
+    "unsupported_claims": [
+      {
+        "claim_id": "rtx4050-plus-vgm-22gb",
+        "claimed_total_memory_mb": 22528,
+        "description": "User-facing claim that RTX 4050 6 GB plus Radeon 890M 16 GB VGM forms a 22 GB local LLM VRAM pool.",
+        "status": "partially_verified"
+      }
+    ]
+  },
+  "created_at": "2026-05-10T00:00:00Z",
+  "decisions": [
+    {
+      "category": "Runtime",
+      "confidence": "observed",
+      "rationale": "The current evidence records backend, lane, device, latency, and outcome without relying on vendor memory claims.",
+      "recommendation": "Use llama.cpp runtime lanes as the primary local test harness."
+    },
+    {
+      "category": "Capacity",
+      "confidence": "observed",
+      "rationale": "The machine profile keeps mixed-device pooling as unverified and records unsupported memory claims separately.",
+      "recommendation": "Treat advertised or reserved graphics memory as a claim until benchmarked."
+    },
+    {
+      "category": "Driver",
+      "confidence": "observed",
+      "rationale": "Experiment comparisons showed driver-branch differences inside normal run-to-run variation for this workflow.",
+      "recommendation": "Record NVIDIA driver branch and version, but do not rank it above backend, device, and model evidence."
+    }
+  ],
+  "evidence": {
+    "benchmark_records": [],
+    "experiment_comparisons": [
+      {
+        "verdict": "inconclusive_token_counts_differ",
+        "warnings": [
+          "driver_branches_differ",
+          "token_counts_differ"
+        ]
+      },
+      {
+        "verdict": "difference_observed_needs_repeats",
+        "warnings": []
+      }
+    ],
+    "experiment_summaries": [
+      {
+        "driver_branch": "game_ready",
+        "driver_version": "596.36",
+        "experiment_id": "exp-game-ready-20260509-59636",
+        "lanes": {
+          "deep": "deep-amd-vgm",
+          "fast": "fast-nvidia"
+        },
+        "outcomes": {
+          "deep": "success",
+          "fast": "success"
+        }
+      },
+      {
+        "driver_branch": "studio",
+        "driver_version": "596.36",
+        "experiment_id": "exp-studio-20260509-59636",
+        "lanes": {
+          "deep": "deep-amd-vgm",
+          "fast": "fast-nvidia"
+        },
+        "outcomes": {
+          "deep": "success",
+          "fast": "success"
+        }
+      },
+      {
+        "driver_branch": "studio",
+        "driver_version": "596.36",
+        "experiment_id": "exp-studio-repeat-20260509-01",
+        "lanes": {
+          "deep": "deep-amd-vgm",
+          "fast": "fast-nvidia"
+        },
+        "outcomes": {
+          "deep": "success",
+          "fast": "success"
+        }
+      },
+      {
+        "driver_branch": "studio",
+        "driver_version": "596.36",
+        "experiment_id": "exp-studio-repeat-20260509-02",
+        "lanes": {
+          "deep": "deep-amd-vgm",
+          "fast": "fast-nvidia"
+        },
+        "outcomes": {
+          "deep": "success",
+          "fast": "success"
+        }
+      },
+      {
+        "driver_branch": "studio",
+        "driver_version": "596.36",
+        "experiment_id": "exp-studio-repeat-20260509-03",
+        "lanes": {
+          "deep": "deep-amd-vgm",
+          "fast": "fast-nvidia"
+        },
+        "outcomes": {
+          "deep": "success",
+          "fast": "success"
+        }
+      }
+    ]
+  },
+  "fit": {
+    "class": "hybrid_local_ai_worker",
+    "confidence": "observed",
+    "summary": "Use separate local runtime lanes for fast small-model work and slower capacity-oriented model work."
+  },
+  "machine": {
+    "label": "ASUS ProArt PX13",
+    "machine_id": "asus-laptop",
+    "platform": {
+      "cpu": "AMD Ryzen AI 9 HX 370",
+      "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU + AMD Radeon 890M",
+      "model": "ProArt PX13",
+      "os_family": "windows",
+      "ram_gb": 32,
+      "vendor": "asus",
+      "vram_mb": 6144
+    }
+  },
+  "next_benchmarks": [
+    "Run fixed-output repeat benchmarks for candidate small models on the NVIDIA/CUDA fast lane.",
+    "Run fixed-output repeat benchmarks for candidate larger GGUF models on the AMD/VGM Vulkan capacity lane.",
+    "Attach AMD Software telemetry summaries to longer AMD/VGM runs."
+  ],
+  "privacy": {
+    "commit_safe": true,
+    "local_paths_included": false
+  },
+  "report_id": "asus-px13-fit-report-example",
+  "runtime_recommendation": {
+    "capacity_lane": {
+      "accelerator_ids": [
+        "amd-igpu-0"
+      ],
+      "backend": "vulkan",
+      "lane_id": "deep-amd-vgm",
+      "model_label": "qwen-27b-iq3",
+      "role": "deep"
+    },
+    "fast_lane": {
+      "accelerator_ids": [
+        "nvidia-dgpu-0"
+      ],
+      "backend": "cuda",
+      "lane_id": "fast-nvidia",
+      "model_label": "jan-v35-4b-q4",
+      "role": "fast"
+    },
+    "model_guidance": [
+      "Use the NVIDIA/CUDA lane for small models that fit dedicated VRAM and need low latency.",
+      "Use the AMD/VGM Vulkan lane for larger GGUF models that do not fit the NVIDIA dGPU, accepting slower generation.",
+      "Do not combine RTX VRAM and AMD VGM into one advertised memory pool unless a benchmark proves mixed-device offload."
+    ],
+    "primary_engine": "llama.cpp",
+    "strategy": "two_lane_local"
+  },
+  "schema_version": "0.1"
+}

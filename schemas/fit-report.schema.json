@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://csi-platform.local/applens-llm/fit-report.schema.json",
+  "title": "AppLens-LLM Fit Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "report_id",
+    "created_at",
+    "machine",
+    "fit",
+    "capacity_assessment",
+    "runtime_recommendation",
+    "evidence",
+    "decisions",
+    "next_benchmarks",
+    "privacy"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "report_id": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "machine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["machine_id", "label", "platform"],
+      "properties": {
+        "machine_id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "platform": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["vendor", "model", "os_family", "cpu", "ram_gb", "gpu", "vram_mb"],
+          "properties": {
+            "vendor": { "type": "string", "minLength": 1 },
+            "model": { "type": "string", "minLength": 1 },
+            "os_family": { "type": "string", "minLength": 1 },
+            "cpu": { "type": "string", "minLength": 1 },
+            "ram_gb": { "type": "integer", "minimum": 0 },
+            "gpu": { "type": "string", "minLength": 1 },
+            "vram_mb": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "fit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["class", "confidence", "summary"],
+      "properties": {
+        "class": {
+          "type": "string",
+          "enum": ["cpu_only", "single_gpu_local_ai_worker", "hybrid_local_ai_worker", "remote_or_cloud_recommended", "insufficient_evidence"]
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["observed", "inferred", "insufficient"]
+        },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "capacity_assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reported_summary_vram_mb",
+        "profile_estimated_usable_memory_mb",
+        "profile_confidence",
+        "mixed_device_pooling",
+        "proven_lanes",
+        "unsupported_claims"
+      ],
+      "properties": {
+        "reported_summary_vram_mb": { "type": "integer", "minimum": 0 },
+        "profile_estimated_usable_memory_mb": { "type": "integer", "minimum": 0 },
+        "profile_confidence": { "type": "string", "minLength": 1 },
+        "mixed_device_pooling": { "type": "string", "minLength": 1 },
+        "proven_lanes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/lane_evidence" }
+        },
+        "unsupported_claims": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/memory_claim" }
+        }
+      }
+    },
+    "runtime_recommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy", "primary_engine", "fast_lane", "capacity_lane", "model_guidance"],
+      "properties": {
+        "strategy": {
+          "type": "string",
+          "enum": ["two_lane_local", "single_lane_local", "benchmark_first", "remote_or_cloud"]
+        },
+        "primary_engine": { "type": "string", "minLength": 1 },
+        "fast_lane": { "$ref": "#/$defs/lane_choice" },
+        "capacity_lane": { "$ref": "#/$defs/lane_choice" },
+        "model_guidance": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["experiment_summaries", "experiment_comparisons", "benchmark_records"],
+      "properties": {
+        "experiment_summaries": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/experiment_summary" }
+        },
+        "experiment_comparisons": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/experiment_comparison" }
+        },
+        "benchmark_records": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/benchmark_summary" }
+        }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/decision" }
+    },
+    "next_benchmarks": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit_safe", "local_paths_included"],
+      "properties": {
+        "commit_safe": { "type": "boolean" },
+        "local_paths_included": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "lane_choice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lane_id", "backend", "accelerator_ids", "role"],
+      "properties": {
+        "lane_id": { "type": "string" },
+        "backend": { "type": "string" },
+        "accelerator_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "role": { "type": "string" },
+        "model_label": { "type": "string" }
+      }
+    },
+    "lane_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lane_id", "backend", "accelerator_ids", "outcome", "latency_ms", "total_tokens"],
+      "properties": {
+        "lane_id": { "type": "string" },
+        "backend": { "type": "string" },
+        "accelerator_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "outcome": { "type": "string" },
+        "latency_ms": { "type": "integer", "minimum": 0 },
+        "total_tokens": { "type": "integer", "minimum": 0 },
+        "model_label": { "type": "string" }
+      }
+    },
+    "memory_claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_id", "description", "claimed_total_memory_mb", "status"],
+      "properties": {
+        "claim_id": { "type": "string" },
+        "description": { "type": "string" },
+        "claimed_total_memory_mb": { "type": "integer", "minimum": 0 },
+        "status": { "type": "string" }
+      }
+    },
+    "experiment_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["experiment_id", "lanes", "outcomes"],
+      "properties": {
+        "experiment_id": { "type": "string" },
+        "driver_branch": { "type": "string" },
+        "driver_version": { "type": "string" },
+        "lanes": { "type": "object" },
+        "outcomes": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "experiment_comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verdict", "warnings"],
+      "properties": {
+        "verdict": { "type": "string" },
+        "warnings": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "benchmark_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_id", "backend", "status"],
+      "properties": {
+        "run_id": { "type": "string" },
+        "backend": { "type": "string" },
+        "status": { "type": "string" },
+        "generation_tokens_per_second": { "type": "number" }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "recommendation", "rationale", "confidence"],
+      "properties": {
+        "category": { "type": "string" },
+        "recommendation": { "type": "string", "minLength": 1 },
+        "rationale": { "type": "string", "minLength": 1 },
+        "confidence": {
+          "type": "string",
+          "enum": ["observed", "inferred", "insufficient"]
+        }
+      }
+    }
+  }
+}

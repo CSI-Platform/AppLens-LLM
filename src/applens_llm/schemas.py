@@ -15,6 +15,7 @@ SCHEMA_NAMES = (
     "hardware-topology",
     "runtime-lanes",
     "blackboard-record",
+    "fit-report",
     "deployment-plan",
     "benchmark-record",
     "training-example",

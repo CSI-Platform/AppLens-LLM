@@ -7,10 +7,11 @@ The local research set converged on the same product shape:
 - AppLens-LLM becomes the action-taking local AI deployment tailor.
 - The first action boundary is model runtime configuration, not system remediation.
 - The machine itself is the verifier: launch, benchmark, score, and reject unsafe fits.
+- The first product artifact is a fit report: a compact deployment-fit recommendation backed by schemas and benchmark evidence.
 
 ## Build Implication
 
-The next deliverable is not a large training run. It is an eval harness plus AppLens-Bench evidence.
+The next deliverable is not a large training run. It is an eval harness, AppLens-Bench evidence, and fit reports that convert evidence into deployment-fit decisions.
 
 Training starts only after we can measure:
 
@@ -88,3 +89,5 @@ AppLens snapshot + AppLens-Tune local AI profile + benchmark facts + workload re
 ```
 
 This repo now treats that mapping as an executable contract: training examples, schema validation, eval reports, and benchmark records.
+
+The first fit report generated from this PX13 evidence classifies the machine as a `hybrid_local_ai_worker` with a `two_lane_local` strategy. That is enough to continue product development without model training yet: the next gap is more benchmark coverage and report quality, not a LoRA.

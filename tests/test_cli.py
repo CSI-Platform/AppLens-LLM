@@ -343,6 +343,32 @@ def test_cli_experiment_compare_writes_comparison(tmp_path: Path) -> None:
     assert payload["candidate"]["driver"]["branch"] == "studio"
 
 
+def test_cli_fit_report_writes_report(tmp_path: Path) -> None:
+    machine_profiles = tmp_path / "machines.jsonl"
+    summary = tmp_path / "summary.json"
+    output = tmp_path / "fit-report.json"
+    machine_profiles.write_text(json.dumps(_fit_machine_profile()) + "\n", encoding="utf-8")
+    summary.write_text(json.dumps(_experiment_summary("studio", fast_ms=1100)), encoding="utf-8")
+
+    result = run_cli(
+        "fit-report",
+        "--machine-profile",
+        str(machine_profiles),
+        "--machine-id",
+        "asus-laptop",
+        "--experiment-summary",
+        str(summary),
+        "--output",
+        str(output),
+    )
+
+    assert result.returncode == 0
+    assert "fit report" in result.stdout
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["machine"]["machine_id"] == "asus-laptop"
+    assert payload["runtime_recommendation"]["strategy"] == "two_lane_local"
+
+
 def _runtime_lanes_payload() -> dict[str, object]:
     return {
         "schema_version": "0.1",
@@ -395,4 +421,82 @@ def _experiment_summary(branch: str, *, fast_ms: int) -> dict[str, object]:
                 "usage": {"total_tokens": 200},
             },
         },
+        "lifecycle": {
+            "started": [
+                {
+                    "lane_id": "fast-nvidia",
+                    "engine": "llama.cpp",
+                    "backend": "cuda",
+                    "device_selector": "CUDA0",
+                    "accelerator_ids": ["nvidia-dgpu-0"],
+                    "model_label": "jan-v35-4b-q4",
+                },
+                {
+                    "lane_id": "deep-amd-vgm",
+                    "engine": "llama.cpp",
+                    "backend": "vulkan",
+                    "device_selector": "Vulkan0",
+                    "accelerator_ids": ["amd-igpu-0"],
+                    "model_label": "qwen-27b-iq3",
+                },
+            ]
+        },
+    }
+
+
+def _fit_machine_profile() -> dict[str, object]:
+    return {
+        "schema_version": "0.1",
+        "machine_id": "asus-laptop",
+        "label": "ASUS ProArt PX13",
+        "capture_status": "captured_sanitized",
+        "capture_priority": 2,
+        "platform": {
+            "vendor": "asus",
+            "model": "ProArt PX13",
+            "sku": "asus-proart-px13-sanitized",
+            "os_family": "windows",
+            "cpu": "AMD Ryzen AI 9 HX 370",
+            "ram_gb": 32,
+            "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU + AMD Radeon 890M",
+            "vram_mb": 6144,
+        },
+        "hardware_topology": {
+            "accelerators": [
+                {
+                    "accelerator_id": "nvidia-dgpu-0",
+                    "kind": "nvidia_dgpu",
+                    "vendor": "nvidia",
+                    "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+                    "present": True,
+                    "api_support": ["cuda"],
+                    "memory": {
+                        "physical_dedicated_vram_mb": 6144,
+                        "vgm_reserved_mb": 0,
+                        "shared_graphics_memory_mb": 0,
+                        "reported_total_graphics_memory_mb": 6144,
+                        "estimated_usable_inference_memory_mb": 6144,
+                        "confidence": "observed",
+                    },
+                    "verification": [{"source_type": "inventory", "notes": "Sanitized inventory."}],
+                }
+            ],
+            "usable_inference_capacity": {
+                "estimated_usable_memory_mb": 6144,
+                "confidence": "observed",
+                "preferred_accelerator_ids": ["nvidia-dgpu-0"],
+                "mixed_device_pooling": "unverified",
+                "verification": [{"source_type": "inventory", "notes": "Sanitized inventory."}],
+            },
+            "memory_claims": [],
+        },
+        "target_roles": ["training_candidate"],
+        "collection": {
+            "applens_report": "captured",
+            "applens_tune_report": "captured",
+            "local_ai_profile": "captured",
+            "llm_bench": "pending",
+            "sanitized": True,
+        },
+        "notes": "Sanitized unit-test profile.",
     }
