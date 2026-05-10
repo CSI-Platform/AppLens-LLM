@@ -108,6 +108,14 @@ Each ranking includes the recommended role, best lane/backend/device, score brea
 
 The current sanitized ASUS PX13 example ranks the observed Jan/Qwen 4B fast CUDA lane ahead of the observed Qwen 27B AMD/VGM Vulkan deep lane for fast-chat use, while still recording the 27B model as the better capacity/deep-review lane. Unbenchmarked candidates are scored as inferred until direct evidence exists.
 
+Generate a sortable local HTML view from the JSON scorecard and any experiment comparison files:
+
+```powershell
+uv run applens-llm model-fit-html --scorecard out/scorecards/asus-px13-model-scorecard.json --experiment-comparison out/blackboard/driver-comparison.json --output out/scorecards/asus-px13-model-scorecard.html
+```
+
+The HTML file is the human-readable dashboard. The JSON remains the source of truth.
+
 ## Fit Reports
 
 `fit-report` is the supporting machine-level artifact. It reads a machine profile plus optional benchmark records, experiment summaries, and experiment comparisons, then writes one JSON recommendation:

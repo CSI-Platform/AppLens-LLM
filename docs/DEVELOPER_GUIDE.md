@@ -118,6 +118,14 @@ Inputs are additive. A candidate inventory gives the scorecard models to rank, e
 
 For the current ASUS PX13 evidence, the scorecard ranks the observed fast CUDA 4B model as an excellent fast-chat fit, the observed AMD/VGM Vulkan 27B model as a good deep-review/capacity fit, and unbenchmarked candidates as usable or experimental until direct evidence exists.
 
+Create the sortable HTML view after the JSON scorecard exists:
+
+```powershell
+uv run applens-llm model-fit-html --scorecard out/scorecards/asus-px13-model-scorecard.json --experiment-comparison out/blackboard/driver-comparison.json --output out/scorecards/asus-px13-model-scorecard.html
+```
+
+The HTML report includes ranking and comparison tables with client-side sorting and filtering. Keep generated HTML under ignored `out/`; commit sanitized JSON examples instead.
+
 ## Write A Fit Report
 
 Use `fit-report` after a machine profile has at least one benchmark or runtime experiment. It is the supporting machine-level decision summary:

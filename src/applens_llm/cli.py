@@ -19,6 +19,7 @@ from applens_llm.model_fit_scorecard import write_model_fit_scorecard
 from applens_llm.orchestrator import run_lane_once
 from applens_llm.runtime_lanes import get_lane, load_runtime_lanes
 from applens_llm.schemas import SchemaValidationError, validate_document, validate_jsonl_file
+from applens_llm.scorecard_html import write_scorecard_html
 from applens_llm.vgm_probe import compare_vgm_snapshots, write_vgm_snapshot
 
 
@@ -258,6 +259,15 @@ def main(argv: list[str] | None = None) -> int:
                 f"top={top['model_id']}; score={top['fit_score']}"
             )
             return 0
+        if args.command == "model-fit-html":
+            write_scorecard_html(
+                scorecard_path=args.scorecard,
+                output_path=args.output,
+                experiment_comparison_paths=args.experiment_comparison,
+                title=args.title,
+            )
+            print(f"model fit html -> {args.output}")
+            return 0
     except SchemaValidationError as exc:
         print(f"schema error: {exc}")
         return 2
@@ -425,6 +435,12 @@ def _build_parser() -> argparse.ArgumentParser:
     model_fit_scorecard.add_argument("--experiment-summary", type=Path, action="append", default=[])
     model_fit_scorecard.add_argument("--scorecard-id")
     model_fit_scorecard.add_argument("--output", type=Path, required=True)
+
+    model_fit_html = subparsers.add_parser("model-fit-html")
+    model_fit_html.add_argument("--scorecard", type=Path, required=True)
+    model_fit_html.add_argument("--experiment-comparison", type=Path, action="append", default=[])
+    model_fit_html.add_argument("--title")
+    model_fit_html.add_argument("--output", type=Path, required=True)
 
     return parser
 

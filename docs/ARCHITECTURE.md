@@ -37,6 +37,8 @@ Blackboard records are the experiment ledger. They let AppLens-LLM route one tas
 
 Model fit scorecards are the product surface above those evidence layers. They should not merely say that a machine is ready. They rank concrete local model choices, explain why each score landed where it did, and separate observed fits from inferred candidates. This lets AppLens answer "Qwen 4B is the better fast-chat fit on CUDA" and "Qwen 27B is the better deep-review capacity fit on AMD/VGM Vulkan" without pretending those lanes form one pooled VRAM device.
 
+The JSON scorecard is the durable contract. Static HTML reports are generated views for humans: sortable/filterable tables over the scorecard plus optional experiment comparisons. HTML should not become the canonical data format.
+
 ## Runtime Path
 
 1. Ingest AppLens capture folders into ignored `capture-record` manifests.
@@ -46,9 +48,10 @@ Model fit scorecards are the product surface above those evidence layers. They s
 5. Run or import benchmark records.
 6. Optionally run runtime lane orchestration and write ignored blackboard evidence.
 7. Produce a model fit scorecard.
-8. Produce a fit report or deployment plan when the workflow needs a summary or executable target.
-9. Validate generated artifacts against schema and policy.
-10. Gate training, downloads, service changes, and network exposure.
+8. Generate an HTML view when a user needs sortable inspection.
+9. Produce a fit report or deployment plan when the workflow needs a summary or executable target.
+10. Validate generated artifacts against schema and policy.
+11. Gate training, downloads, service changes, and network exposure.
 
 ## First Model Target
 
