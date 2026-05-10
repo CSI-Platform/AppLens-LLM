@@ -318,6 +318,63 @@ def test_cli_experiment_run_skip_start_writes_summary(tmp_path: Path) -> None:
     assert summary_payload["driver_evidence"][0]["driver_branch"] == "game_ready"
 
 
+def test_cli_overnight_loop_skip_start_writes_failure_summary(tmp_path: Path) -> None:
+    config = tmp_path / "lanes.json"
+    blackboard = tmp_path / "overnight.jsonl"
+    summary = tmp_path / "overnight-summary.json"
+    payload = _runtime_lanes_payload()
+    payload["lanes"].append(
+        {
+            "lane_id": "deep-amd-vgm",
+            "role": "deep",
+            "engine": "llama.cpp",
+            "backend": "vulkan",
+            "endpoint": "http://127.0.0.1:9/v1",
+            "model": {"label": "qwen-27b", "path": "models/qwen.gguf"},
+            "device": {"selector": "Vulkan0", "accelerator_ids": ["amd-igpu-0"]},
+            "launch": {
+                "server_binary": "llama-server",
+                "context_tokens": 2048,
+                "gpu_layers": 99,
+                "threads": 12,
+                "environment": {},
+            },
+        }
+    )
+    config.write_text(json.dumps(payload), encoding="utf-8")
+
+    result = run_cli(
+        "overnight-loop",
+        "--config",
+        str(config),
+        "--fast-lane",
+        "fast-nvidia",
+        "--deep-lane",
+        "deep-amd-vgm",
+        "--experiment-id",
+        "overnight-cli",
+        "--prompt",
+        "test handoff",
+        "--blackboard",
+        str(blackboard),
+        "--summary",
+        str(summary),
+        "--skip-start",
+        "--max-iterations",
+        "1",
+        "--timeout-seconds",
+        "1",
+        "--sleep-seconds",
+        "0",
+    )
+
+    assert result.returncode == 0
+    assert "overnight loop overnight-cli" in result.stdout
+    payload = json.loads(summary.read_text(encoding="utf-8"))
+    assert payload["stop_reason"] == "fast_failure"
+    assert payload["completed_iterations"] == 0
+
+
 def test_cli_experiment_compare_writes_comparison(tmp_path: Path) -> None:
     baseline = tmp_path / "baseline.json"
     candidate = tmp_path / "candidate.json"

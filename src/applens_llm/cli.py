@@ -17,6 +17,7 @@ from applens_llm.lane_processes import build_server_command, start_lane, stop_la
 from applens_llm.llamacpp_probe import run_llamacpp_bench, write_llamacpp_devices
 from applens_llm.model_fit_scorecard import write_model_fit_scorecard
 from applens_llm.orchestrator import run_lane_once
+from applens_llm.overnight_loop import load_loop_prompts, run_overnight_loop
 from applens_llm.runtime_lanes import get_lane, load_runtime_lanes
 from applens_llm.schemas import SchemaValidationError, validate_document, validate_jsonl_file
 from applens_llm.scorecard_html import write_scorecard_html
@@ -217,6 +218,39 @@ def main(argv: list[str] | None = None) -> int:
                 f"deep={summary['responses']['deep']['outcome']}"
             )
             return 0
+        if args.command == "overnight-loop":
+            config = load_runtime_lanes(args.config)
+            prompts = load_loop_prompts(prompt_args=args.prompt, prompt_file=args.prompt_file)
+            driver_evidence = collect_nvidia_driver_evidence(driver_branch=args.nvidia_driver_branch)
+            summary = run_overnight_loop(
+                config=config,
+                fast_lane_id=args.fast_lane,
+                deep_lane_id=args.deep_lane,
+                experiment_id=args.experiment_id,
+                prompts=prompts,
+                blackboard_path=args.blackboard,
+                summary_path=args.summary,
+                state_path=args.state,
+                logs_dir=args.logs_dir,
+                timeout_seconds=args.timeout_seconds,
+                deep_timeout_seconds=args.deep_timeout_seconds,
+                fast_max_tokens=args.fast_max_tokens,
+                deep_max_tokens=args.deep_max_tokens,
+                driver_evidence=driver_evidence,
+                skip_start=args.skip_start,
+                keep_running=args.keep_running,
+                continue_on_failure=args.continue_on_failure,
+                max_iterations=args.max_iterations,
+                max_runtime_minutes=args.max_runtime_minutes,
+                sleep_seconds=args.sleep_seconds,
+            )
+            print(
+                f"overnight loop {summary['experiment_id']} -> {args.summary}; "
+                f"completed={summary['completed_iterations']}; "
+                f"attempted={summary['attempted_iterations']}; "
+                f"stop_reason={summary['stop_reason']}"
+            )
+            return 0
         if args.command == "experiment-compare":
             comparison = write_experiment_comparison(args.baseline, args.candidate, args.output)
             fast_delta = comparison["deltas"]["fast"]["latency_ms_delta"]
@@ -273,6 +307,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     except KeyError as exc:
         print(f"runtime lane error: {exc}")
+        return 2
+    except ValueError as exc:
+        print(f"configuration error: {exc}")
         return 2
     except OSError as exc:
         print(f"benchmark error: {exc}")
@@ -412,6 +449,34 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     experiment_run.add_argument("--skip-start", action="store_true")
     experiment_run.add_argument("--keep-running", action="store_true")
+
+    overnight_loop = subparsers.add_parser("overnight-loop")
+    overnight_loop.add_argument("--config", type=Path, required=True)
+    overnight_loop.add_argument("--fast-lane", required=True)
+    overnight_loop.add_argument("--deep-lane", required=True)
+    overnight_loop.add_argument("--experiment-id", required=True)
+    overnight_loop.add_argument("--prompt", action="append", default=[])
+    overnight_loop.add_argument("--prompt-file", type=Path)
+    overnight_loop.add_argument("--blackboard", type=Path, required=True)
+    overnight_loop.add_argument("--summary", type=Path, required=True)
+    overnight_loop.add_argument("--state", type=Path, default=Path("out/runtime/lane-processes.json"))
+    overnight_loop.add_argument("--logs-dir", type=Path, default=Path("out/logs"))
+    overnight_loop.add_argument("--timeout-seconds", type=int, default=120)
+    overnight_loop.add_argument("--deep-timeout-seconds", type=int, default=600)
+    overnight_loop.add_argument("--fast-max-tokens", type=int, default=256)
+    overnight_loop.add_argument("--deep-max-tokens", type=int, default=512)
+    overnight_loop.add_argument("--max-iterations", type=int, default=8)
+    overnight_loop.add_argument("--max-runtime-minutes", type=float, default=480)
+    overnight_loop.add_argument("--sleep-seconds", type=float, default=30)
+    overnight_loop.add_argument("--skip-start", action="store_true")
+    overnight_loop.add_argument("--keep-running", action="store_true")
+    overnight_loop.add_argument("--continue-on-failure", action="store_true")
+    overnight_loop.add_argument(
+        "--nvidia-driver-branch",
+        choices=["game_ready", "studio", "oem", "unknown"],
+        default="unknown",
+        help="NVIDIA driver branch reported by the NVIDIA App; version is collected with nvidia-smi.",
+    )
 
     experiment_compare = subparsers.add_parser("experiment-compare")
     experiment_compare.add_argument("--baseline", type=Path, required=True)

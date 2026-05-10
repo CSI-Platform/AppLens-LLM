@@ -86,6 +86,14 @@ For the common fast-to-deep handoff experiment, use one command:
 uv run applens-llm experiment-run --config out/runtime/local-lanes.json --fast-lane fast-nvidia --deep-lane deep-amd-vgm --experiment-id exp-local --prompt "Explain why AppLens-LLM treats advertised VRAM claims as unproven until benchmarked." --blackboard out/blackboard/exp-local.jsonl --summary out/blackboard/exp-local-summary.json --deep-max-tokens 320 --nvidia-driver-branch game_ready
 ```
 
+For a bounded overnight handoff loop, use `overnight-loop`. It repeats fast-to-deep handoffs across inline prompts or a prompt file, writes every task/response/handoff/verdict to the blackboard, and stops on iteration, time, or failure limits:
+
+```powershell
+uv run applens-llm overnight-loop --config out/runtime/two-lane.local.json --fast-lane fast-nvidia --deep-lane deep-amd-vgm --experiment-id overnight-local --prompt-file examples/overnight-prompts.example.txt --blackboard out/blackboard/overnight-local.jsonl --summary out/blackboard/overnight-local-summary.json --max-iterations 8 --max-runtime-minutes 480 --sleep-seconds 30 --deep-max-tokens 320 --nvidia-driver-branch studio
+```
+
+Use `--skip-start` if both llama.cpp servers are already running. Use `--keep-running` if the command starts the lanes but should leave them up after the loop. By default, the loop stops on the first lane failure; add `--continue-on-failure` only when repeated failure records are useful.
+
 Compare two experiment summaries:
 
 ```powershell

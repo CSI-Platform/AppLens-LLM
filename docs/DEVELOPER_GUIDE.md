@@ -94,6 +94,14 @@ uv run applens-llm experiment-run --config out/runtime/local-lanes.json --fast-l
 
 By default this starts both lanes, waits for their endpoints, routes the task through the fast lane, sends the fast answer to the deep lane for review, writes a blackboard JSONL ledger, writes a summary JSON, and stops started lanes. Use `--skip-start` for already-running endpoints and `--keep-running` when you want to reuse the servers.
 
+For repeated handoffs, use `overnight-loop`:
+
+```powershell
+uv run applens-llm overnight-loop --config out/runtime/two-lane.local.json --fast-lane fast-nvidia --deep-lane deep-amd-vgm --experiment-id overnight-local --prompt-file examples/overnight-prompts.example.txt --blackboard out/blackboard/overnight-local.jsonl --summary out/blackboard/overnight-local-summary.json --max-iterations 8 --max-runtime-minutes 480 --sleep-seconds 30 --deep-max-tokens 320 --nvidia-driver-branch studio
+```
+
+The loop appends a `task`, fast `model_response` or `failure`, `handoff`, deep `model_response` or `failure`, and `verdict` for each attempted iteration. It stops on the first fast or deep failure unless `--continue-on-failure` is set. Keep the prompt file sanitized if committed; real overnight output belongs under ignored `out/blackboard/`.
+
 `--nvidia-driver-branch` records the driver family that the user sees in NVIDIA App. AppLens collects the installed NVIDIA driver version with `nvidia-smi`; it does not infer Game Ready versus Studio from the version alone. Treat any driver version or branch change as a benchmark invalidator and rerun the same experiment before comparing results.
 
 NVIDIA's public driver guidance says Game Ready prioritizes day-of-launch game support, while Studio prioritizes reliability for creative workflows. AppLens should record this as evidence, not change GPU drivers automatically.

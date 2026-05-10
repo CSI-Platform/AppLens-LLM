@@ -1,0 +1,3 @@
+Explain why AppLens-LLM should keep NVIDIA CUDA and AMD VGM/Vulkan as separate lanes instead of one pooled memory claim.
+Review the current model-fit scorecard and propose the next benchmark that would most improve confidence.
+Identify one local AI readiness gap AppLens-Tune should report before AppLens-LLM recommends a larger model.
