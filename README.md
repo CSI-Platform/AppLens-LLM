@@ -2,23 +2,35 @@
 
 AppLens-LLM is the local model outfitter workspace for AppLens.
 
-It turns AppLens/AppLens-Tune machine evidence, workload goals, and benchmark results into validated local LLM deployment plans and training examples.
+It turns AppLens/AppLens-Tune machine evidence, workload goals, and benchmark results into local model fit scorecards, fit reports, deployment plans, and training examples.
 
 ## What This Repo Owns
 
-- Strict schemas for deployment plans, benchmark records, and training examples.
+- Strict schemas for model fit scorecards, fit reports, deployment plans, benchmark records, and training examples.
 - A hardware topology contract that separates reported graphics memory, reserved/shared memory, and proven usable local inference capacity.
 - Seed data for the first AppLens-Tailor training target.
 - A validation CLI for JSON and JSONL artifacts.
 - A capture ingestion CLI for AppLens `.md` reports and legacy `.txt` reports.
 - An OpenAI-compatible benchmark runner for Jan, llama.cpp, and similar local endpoints.
 - A blackboard-backed runtime orchestrator for comparing portable local model lanes.
-- A `fit-report` artifact that turns machine profiles and benchmark evidence into a deployment-fit recommendation.
+- A `model-fit-scorecard` artifact that ranks local models by role, backend/device lane, score, blockers, and confidence.
+- A `fit-report` artifact that summarizes the machine-level deployment posture.
 - Roadmap and architecture docs for the AppLens-LLM extension.
 
-## Current Training Target
+## Current Product Target
 
-The first target is AppLens-Tailor:
+The first product target is the local model fit meter:
+
+```text
+machine evidence + local model inventory + benchmark facts + workload goals
+-> schema-valid model-fit-scorecard JSON
+```
+
+The scorecard answers which local LLMs fit this PC best, for which role, on which backend/device, with what confidence. It is the artifact AppLens should expose first.
+
+## Training Target
+
+The first trainable target is still AppLens-Tailor:
 
 ```text
 machine evidence + local AI profile + benchmark facts + workload request
@@ -34,6 +46,7 @@ uv sync --dev
 uv run pytest
 uv run applens-llm validate-jsonl --schema training-example data/examples.seed.jsonl
 uv run applens-llm validate-jsonl --schema machine-profile data/machines.seed.jsonl
+uv run applens-llm validate --schema model-fit-scorecard examples/asus-px13-model-fit-scorecard.example.json
 uv run applens-llm validate --schema fit-report examples/asus-px13-fit-report.example.json
 uv run applens-llm ingest-captures --source ../AppLens/raw --output data/raw/capture-records.jsonl
 uv run applens-llm eval --examples data/examples.seed.jsonl --output out/eval-report.json
@@ -83,15 +96,27 @@ Committed lane examples must stay sanitized. Put machine-specific binaries, loca
 
 Driver branch is runtime evidence. NVIDIA describes Game Ready drivers as game-focused and Studio drivers as reliability-focused for creative workflows; both can run games and creative apps. AppLens records the branch reported by the user plus the version from `nvidia-smi`, and a branch or version change means benchmark comparisons should be rerun instead of treated as equivalent.
 
+## Model Fit Scorecards
+
+`model-fit-scorecard` is the primary product artifact. It reads a machine profile, optional model candidate inventory, benchmark records, and experiment summaries, then ranks model choices out of 100:
+
+```powershell
+uv run applens-llm model-fit-scorecard --machine-profile data/machines.seed.jsonl --machine-id asus-laptop --model-candidates examples/asus-px13-model-candidates.example.json --experiment-summary out/blackboard/exp-studio-summary.json --output out/scorecards/asus-px13-model-scorecard.json
+```
+
+Each ranking includes the recommended role, best lane/backend/device, score breakdown, observed or inferred confidence, reasons, blockers, and next benchmark. Generated scorecards belong under ignored `out/`; committed examples must stay sanitized.
+
+The current sanitized ASUS PX13 example ranks the observed Jan/Qwen 4B fast CUDA lane ahead of the observed Qwen 27B AMD/VGM Vulkan deep lane for fast-chat use, while still recording the 27B model as the better capacity/deep-review lane. Unbenchmarked candidates are scored as inferred until direct evidence exists.
+
 ## Fit Reports
 
-`fit-report` is the product-facing artifact. It reads a machine profile plus optional benchmark records, experiment summaries, and experiment comparisons, then writes one JSON recommendation:
+`fit-report` is the supporting machine-level artifact. It reads a machine profile plus optional benchmark records, experiment summaries, and experiment comparisons, then writes one JSON recommendation:
 
 ```powershell
 uv run applens-llm fit-report --machine-profile data/machines.seed.jsonl --machine-id asus-laptop --experiment-summary out/blackboard/exp-studio-summary.json --experiment-comparison out/blackboard/driver-comparison.json --output out/fit-reports/asus-px13-local-fit.json
 ```
 
-The report summarizes local fit class, proven lanes, unsupported memory claims, runtime strategy, model guidance, decisions, and next benchmarks. Generated reports belong under ignored `out/`; committed examples must stay sanitized.
+The report summarizes local fit class, proven lanes, unsupported memory claims, runtime strategy, model guidance, decisions, and next benchmarks. AppLens should use it behind or beside the scorecard, not as the main local model ranking surface. Generated reports belong under ignored `out/`; committed examples must stay sanitized.
 
 ## Hardware Memory Rule
 

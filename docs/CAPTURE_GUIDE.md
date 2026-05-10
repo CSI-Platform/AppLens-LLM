@@ -26,6 +26,7 @@ For every machine, collect:
 - memory evidence per accelerator: physical dedicated VRAM, VGM or reserved memory, shared graphics memory, reported total graphics memory, estimated usable inference memory, confidence, and source
 - one small local inference benchmark when practical
 - benchmark proof fields: backend, devices used, mixed-device offload, tokens/sec, OOM/fallback/crash, CPU spill, and thermal notes
+- local model candidate inventory: sanitized model label, family, parameter size, quantization, file size, local/candidate/missing status, and intended roles
 - telemetry source notes, especially AMD Software: Adrenalin Edition logs for Radeon/VGM benchmark runs
 
 Do not collect browser history, tokens, SSH keys, user files, raw application data, client documents, or private paths unless they are manually redacted.
@@ -62,6 +63,7 @@ uv run applens-llm ingest-captures --source ../AppLens/raw --output data/raw/cap
 Promote only:
 
 - sanitized `machine-profile` rows
+- sanitized model candidate lists for scorecards
 - sanitized `training-example` rows
 - benchmark records with no private paths
 - brief notes that explain failures or policy gates

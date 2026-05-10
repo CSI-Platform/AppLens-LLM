@@ -15,6 +15,7 @@ from applens_llm.experiments import run_two_lane_experiment
 from applens_llm.fit_report import write_fit_report
 from applens_llm.lane_processes import build_server_command, start_lane, stop_lane
 from applens_llm.llamacpp_probe import run_llamacpp_bench, write_llamacpp_devices
+from applens_llm.model_fit_scorecard import write_model_fit_scorecard
 from applens_llm.orchestrator import run_lane_once
 from applens_llm.runtime_lanes import get_lane, load_runtime_lanes
 from applens_llm.schemas import SchemaValidationError, validate_document, validate_jsonl_file
@@ -241,6 +242,22 @@ def main(argv: list[str] | None = None) -> int:
                 f"strategy={report['runtime_recommendation']['strategy']}"
             )
             return 0
+        if args.command == "model-fit-scorecard":
+            scorecard = write_model_fit_scorecard(
+                machine_profile_path=args.machine_profile,
+                machine_id=args.machine_id,
+                model_candidates_path=args.model_candidates,
+                benchmark_record_paths=args.benchmark_record,
+                experiment_summary_paths=args.experiment_summary,
+                scorecard_id=args.scorecard_id,
+                output_path=args.output,
+            )
+            top = scorecard["rankings"][0]
+            print(
+                f"model fit scorecard {scorecard['scorecard_id']} -> {args.output}; "
+                f"top={top['model_id']}; score={top['fit_score']}"
+            )
+            return 0
     except SchemaValidationError as exc:
         print(f"schema error: {exc}")
         return 2
@@ -399,6 +416,15 @@ def _build_parser() -> argparse.ArgumentParser:
     fit_report.add_argument("--experiment-comparison", type=Path, action="append", default=[])
     fit_report.add_argument("--report-id")
     fit_report.add_argument("--output", type=Path, required=True)
+
+    model_fit_scorecard = subparsers.add_parser("model-fit-scorecard")
+    model_fit_scorecard.add_argument("--machine-profile", type=Path, required=True)
+    model_fit_scorecard.add_argument("--machine-id")
+    model_fit_scorecard.add_argument("--model-candidates", type=Path)
+    model_fit_scorecard.add_argument("--benchmark-record", type=Path, action="append", default=[])
+    model_fit_scorecard.add_argument("--experiment-summary", type=Path, action="append", default=[])
+    model_fit_scorecard.add_argument("--scorecard-id")
+    model_fit_scorecard.add_argument("--output", type=Path, required=True)
 
     return parser
 

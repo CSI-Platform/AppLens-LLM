@@ -7,11 +7,11 @@ The local research set converged on the same product shape:
 - AppLens-LLM becomes the action-taking local AI deployment tailor.
 - The first action boundary is model runtime configuration, not system remediation.
 - The machine itself is the verifier: launch, benchmark, score, and reject unsafe fits.
-- The first product artifact is a fit report: a compact deployment-fit recommendation backed by schemas and benchmark evidence.
+- The first product artifact is a model fit scorecard: a ranked local model meter backed by schemas and benchmark evidence.
 
 ## Build Implication
 
-The next deliverable is not a large training run. It is an eval harness, AppLens-Bench evidence, and fit reports that convert evidence into deployment-fit decisions.
+The next deliverable is not a large training run. It is an eval harness, AppLens-Bench evidence, and model fit scorecards that convert evidence into ranked local model decisions.
 
 Training starts only after we can measure:
 
@@ -19,7 +19,20 @@ Training starts only after we can measure:
 - safe versus gated action agreement
 - runtime/model/quantization fit
 - benchmark grounding
+- model ranking and score explanation
 - failure modes such as OOM, bad host binding, missing training manifest, and unsupported network exposure
+
+## Product Critique
+
+An uninterested third party would say AppLens, AppLens-Tune, and AppLens-LLM only become a product when they turn low-level machine evidence into a concrete local model choice. Inventory alone is not enough, and "ready/not ready" is too vague.
+
+The stronger shape is:
+
+- AppLens captures hardware, drivers, memory claims, and local model inventory.
+- AppLens-Tune reports readiness gaps such as VGM inactive, missing runtime binaries, driver branch/version changes, thermal constraints, or restart-required state.
+- AppLens-LLM ranks local models by fit score, recommended role, backend/device lane, blockers, and confidence.
+
+That scorecard is the meter the user asked for: `Jan v3.5 4B Q4 is 98/100 for fast chat because it is observed, fast, stable, and fits CUDA`; `Qwen3.5 27B IQ3 is 89/100 for deep review because it works on AMD/VGM Vulkan but is slower`; an unbenchmarked Gemma candidate cannot get an observed score until it runs.
 
 ## What We Accept
 
@@ -88,6 +101,6 @@ AppLens snapshot + AppLens-Tune local AI profile + benchmark facts + workload re
 -> deployment-plan JSON
 ```
 
-This repo now treats that mapping as an executable contract: training examples, schema validation, eval reports, and benchmark records.
+This repo now treats that mapping as an executable contract: training examples, schema validation, eval reports, benchmark records, and model fit scorecards.
 
-The first fit report generated from this PX13 evidence classifies the machine as a `hybrid_local_ai_worker` with a `two_lane_local` strategy. That is enough to continue product development without model training yet: the next gap is more benchmark coverage and report quality, not a LoRA.
+The first fit report generated from this PX13 evidence classifies the machine as a `hybrid_local_ai_worker` with a `two_lane_local` strategy. The first scorecard turns that into ranked model choices. That is enough to continue product development without model training yet: the next gap is more benchmark coverage, candidate model inventory, and scorecard quality, not a LoRA.

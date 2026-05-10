@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://csi-platform.local/applens-llm/model-fit-scorecard.schema.json",
+  "title": "AppLens-LLM Model Fit Scorecard",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "scorecard_id",
+    "created_at",
+    "machine",
+    "scoring_weights",
+    "rankings",
+    "evidence",
+    "next_actions",
+    "privacy"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "scorecard_id": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "machine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["machine_id", "label", "platform"],
+      "properties": {
+        "machine_id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "platform": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cpu", "gpu", "ram_gb", "os_family"],
+          "properties": {
+            "cpu": { "type": "string" },
+            "gpu": { "type": "string" },
+            "ram_gb": { "type": "integer", "minimum": 0 },
+            "os_family": { "type": "string" }
+          }
+        }
+      }
+    },
+    "scoring_weights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capacity_fit",
+        "speed_latency",
+        "stability",
+        "role_fit",
+        "quality_size",
+        "operational_readiness",
+        "evidence_confidence"
+      ],
+      "properties": {
+        "capacity_fit": { "type": "integer", "const": 25 },
+        "speed_latency": { "type": "integer", "const": 20 },
+        "stability": { "type": "integer", "const": 15 },
+        "role_fit": { "type": "integer", "const": 15 },
+        "quality_size": { "type": "integer", "const": 10 },
+        "operational_readiness": { "type": "integer", "const": 10 },
+        "evidence_confidence": { "type": "integer", "const": 5 }
+      }
+    },
+    "rankings": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/model_ranking" }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["experiment_summary_count", "benchmark_record_count", "candidate_model_count"],
+      "properties": {
+        "experiment_summary_count": { "type": "integer", "minimum": 0 },
+        "benchmark_record_count": { "type": "integer", "minimum": 0 },
+        "candidate_model_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "next_actions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit_safe", "local_paths_included"],
+      "properties": {
+        "commit_safe": { "type": "boolean" },
+        "local_paths_included": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "model_ranking": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rank",
+        "model_id",
+        "display_name",
+        "family",
+        "parameter_size_b",
+        "quantization",
+        "local_status",
+        "recommended_role",
+        "best_lane",
+        "fit_score",
+        "score_band",
+        "score_breakdown",
+        "confidence",
+        "reasons",
+        "blockers",
+        "evidence",
+        "next_benchmark"
+      ],
+      "properties": {
+        "rank": { "type": "integer", "minimum": 1 },
+        "model_id": { "type": "string", "minLength": 1 },
+        "display_name": { "type": "string", "minLength": 1 },
+        "family": { "type": "string", "minLength": 1 },
+        "parameter_size_b": { "type": "number", "minimum": 0 },
+        "quantization": { "type": "string", "minLength": 1 },
+        "local_status": {
+          "type": "string",
+          "enum": ["local", "candidate", "missing", "unknown"]
+        },
+        "recommended_role": {
+          "type": "string",
+          "enum": ["fast_chat", "deep_review", "coding", "summarization", "general_chat", "not_recommended"]
+        },
+        "best_lane": { "$ref": "#/$defs/lane_choice" },
+        "fit_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "score_band": {
+          "type": "string",
+          "enum": ["excellent", "good", "usable", "experimental", "not_recommended"]
+        },
+        "score_breakdown": { "$ref": "#/$defs/score_breakdown" },
+        "confidence": {
+          "type": "string",
+          "enum": ["observed", "inferred", "insufficient"]
+        },
+        "reasons": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "blockers": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source", "observation_count"],
+          "properties": {
+            "source": { "type": "string", "minLength": 1 },
+            "observation_count": { "type": "integer", "minimum": 0 },
+            "avg_latency_ms": { "type": "number", "minimum": 0 },
+            "avg_total_tokens": { "type": "number", "minimum": 0 }
+          }
+        },
+        "next_benchmark": { "type": "string", "minLength": 1 }
+      }
+    },
+    "lane_choice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lane_id", "backend", "accelerator_ids", "role"],
+      "properties": {
+        "lane_id": { "type": "string" },
+        "backend": { "type": "string" },
+        "accelerator_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "role": { "type": "string" },
+        "model_label": { "type": "string" }
+      }
+    },
+    "score_breakdown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capacity_fit",
+        "speed_latency",
+        "stability",
+        "role_fit",
+        "quality_size",
+        "operational_readiness",
+        "evidence_confidence"
+      ],
+      "properties": {
+        "capacity_fit": { "type": "integer", "minimum": 0, "maximum": 25 },
+        "speed_latency": { "type": "integer", "minimum": 0, "maximum": 20 },
+        "stability": { "type": "integer", "minimum": 0, "maximum": 15 },
+        "role_fit": { "type": "integer", "minimum": 0, "maximum": 15 },
+        "quality_size": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "operational_readiness": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "evidence_confidence": { "type": "integer", "minimum": 0, "maximum": 5 }
+      }
+    }
+  }
+}

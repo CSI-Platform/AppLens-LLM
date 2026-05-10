@@ -16,6 +16,7 @@ SCHEMA_NAMES = (
     "runtime-lanes",
     "blackboard-record",
     "fit-report",
+    "model-fit-scorecard",
     "deployment-plan",
     "benchmark-record",
     "training-example",

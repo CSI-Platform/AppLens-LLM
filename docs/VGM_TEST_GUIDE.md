@@ -61,6 +61,8 @@ uv run applens-llm vgm-compare `
 
 The first pass only proves VGM activation. It does not prove an RTX plus Radeon pooled inference device. That requires a separate runtime benchmark that records backend, devices used, memory use, CPU spill, fallback, OOM/crash status, tokens/sec, and thermal notes.
 
+After the benchmark or two-lane run, feed the summary into `model-fit-scorecard` so AppLens-LLM ranks the model choices instead of only reporting that VGM worked.
+
 ## llama.cpp Vulkan Test
 
 Use one llama.cpp Vulkan build for the equal-backend comparison. The b8892 Windows Vulkan release sees this ASUS PX13 as:
@@ -167,6 +169,19 @@ The first Studio repeatability pass with the same prompt and token caps produced
 | AMD/VGM Vulkan deep lane | 20966.75 ms | 18999 ms | 22377 ms | 3378 ms | 269.75 |
 
 Interpretation: the observed Game Ready versus Studio difference is smaller than normal run-to-run variation for this workflow. AppLens should record driver branch/version, but it should prioritize backend, device, model size, quantization, and repeat benchmark evidence.
+
+Generate the first local model meter from the experiment summaries:
+
+```powershell
+uv run applens-llm model-fit-scorecard `
+  --machine-profile data/machines.seed.jsonl `
+  --machine-id asus-laptop `
+  --model-candidates examples/asus-px13-model-candidates.example.json `
+  --experiment-summary out/blackboard/exp-studio-summary.json `
+  --output out/scorecards/asus-px13-model-scorecard.json
+```
+
+Use the scorecard to decide which model is best for fast chat, deep review, coding, or summarization on this machine. Treat unbenchmarked models as candidates until the same lane evidence exists.
 
 ## AMD Software Telemetry
 

@@ -13,6 +13,7 @@ uv run pytest
 uv run applens-llm validate --schema deployment-plan examples/gaming-pc-deployment-plan.json
 uv run applens-llm validate --schema benchmark-record examples/gaming-pc-benchmark-record.json
 uv run applens-llm validate --schema runtime-lanes examples/runtime-lanes.example.json
+uv run applens-llm validate --schema model-fit-scorecard examples/asus-px13-model-fit-scorecard.example.json
 uv run applens-llm validate --schema fit-report examples/asus-px13-fit-report.example.json
 uv run applens-llm validate-jsonl --schema training-example data/examples.seed.jsonl
 uv run applens-llm validate-jsonl --schema machine-profile data/machines.seed.jsonl
@@ -105,9 +106,21 @@ uv run applens-llm experiment-compare --baseline out/blackboard/exp-game-ready-s
 
 The comparison reports driver branch/version, lane equality, per-lane latency deltas, token-count deltas, latency per token, and warnings such as `token_counts_differ`. Treat a single comparison as directional evidence unless repeated runs show the same pattern.
 
+## Write A Model Fit Scorecard
+
+Use `model-fit-scorecard` as the first user-facing local AI artifact. It ranks candidate models by score, role, best backend/device lane, confidence, reasons, blockers, and next benchmark:
+
+```powershell
+uv run applens-llm model-fit-scorecard --machine-profile data/machines.seed.jsonl --machine-id asus-laptop --model-candidates examples/asus-px13-model-candidates.example.json --experiment-summary out/blackboard/exp-studio-summary.json --output out/scorecards/asus-px13-model-scorecard.json
+```
+
+Inputs are additive. A candidate inventory gives the scorecard models to rank, experiment summaries provide lane-level observed evidence, and benchmark records provide direct backend/device proof. If a candidate has no direct evidence, the scorecard can infer a provisional lane from model size and accelerator capacity, but it must mark confidence as `inferred` and include `no_observed_benchmark`.
+
+For the current ASUS PX13 evidence, the scorecard ranks the observed fast CUDA 4B model as an excellent fast-chat fit, the observed AMD/VGM Vulkan 27B model as a good deep-review/capacity fit, and unbenchmarked candidates as usable or experimental until direct evidence exists.
+
 ## Write A Fit Report
 
-Use `fit-report` after a machine profile has at least one benchmark or runtime experiment. It is the decision artifact AppLens-LLM should expose first:
+Use `fit-report` after a machine profile has at least one benchmark or runtime experiment. It is the supporting machine-level decision summary:
 
 ```powershell
 uv run applens-llm fit-report --machine-profile data/machines.seed.jsonl --machine-id asus-laptop --experiment-summary out/blackboard/exp-studio-summary.json --experiment-comparison out/blackboard/driver-comparison.json --output out/fit-reports/asus-px13-local-fit.json

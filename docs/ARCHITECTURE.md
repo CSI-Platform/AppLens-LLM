@@ -2,7 +2,7 @@
 
 AppLens-LLM is the model-fitting workspace beside AppLens.
 
-AppLens measures the machine. AppLens-Tune describes workstation readiness. AppLens-LLM converts those measurements, workload goals, and benchmark records into a deployment plan that a runtime can execute or reject.
+AppLens measures the machine. AppLens-Tune describes workstation readiness. AppLens-LLM converts those measurements, workload goals, model inventory, and benchmark records into a model fit scorecard first, then fit reports and deployment plans where needed.
 
 ## Boundaries
 
@@ -17,6 +17,7 @@ V1 may start a user-owned local model runtime and write benchmark logs. It may r
 - `schemas/hardware-topology.schema.json`: accelerator inventory, memory claims, and usable inference capacity evidence.
 - `schemas/runtime-lanes.schema.json`: portable local runtime lane configs for CUDA, Vulkan, ROCm/HIP, Metal, DirectML, CPU, RPC, and OpenAI-compatible endpoints.
 - `schemas/blackboard-record.schema.json`: append-only experiment events for tasks, handoffs, responses, failures, benchmark references, and verdicts.
+- `schemas/model-fit-scorecard.schema.json`: primary product artifact for ranking local models by score, role, backend/device lane, blockers, and confidence.
 - `schemas/deployment-plan.schema.json`: strict output target for the first AppLens-Tailor model.
 - `schemas/benchmark-record.schema.json`: benchmark proof attached to a recommendation.
 - `schemas/training-example.schema.json`: supervised training and eval row shape.
@@ -34,16 +35,20 @@ Runtime lanes are the orchestration layer above benchmark records. A lane record
 
 Blackboard records are the experiment ledger. They let AppLens-LLM route one task through one or more lanes, capture successes and failures, and later compare evidence without assuming that advertised capacity or a specific vendor path is inherently better.
 
+Model fit scorecards are the product surface above those evidence layers. They should not merely say that a machine is ready. They rank concrete local model choices, explain why each score landed where it did, and separate observed fits from inferred candidates. This lets AppLens answer "Qwen 4B is the better fast-chat fit on CUDA" and "Qwen 27B is the better deep-review capacity fit on AMD/VGM Vulkan" without pretending those lanes form one pooled VRAM device.
+
 ## Runtime Path
 
 1. Ingest AppLens capture folders into ignored `capture-record` manifests.
 2. Promote reviewed captures into sanitized machine profiles or training examples.
 3. Read workload intent.
-4. Run or import benchmark records.
-5. Optionally run runtime lane orchestration and write ignored blackboard evidence.
-6. Produce a deployment plan.
-7. Validate the plan against schema and policy.
-8. Gate training, downloads, service changes, and network exposure.
+4. Import local model candidates and discovered model inventory.
+5. Run or import benchmark records.
+6. Optionally run runtime lane orchestration and write ignored blackboard evidence.
+7. Produce a model fit scorecard.
+8. Produce a fit report or deployment plan when the workflow needs a summary or executable target.
+9. Validate generated artifacts against schema and policy.
+10. Gate training, downloads, service changes, and network exposure.
 
 ## First Model Target
 

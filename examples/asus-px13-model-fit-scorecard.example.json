@@ -1,0 +1,181 @@
+{
+  "created_at": "2026-05-10T00:00:00Z",
+  "evidence": {
+    "benchmark_record_count": 0,
+    "candidate_model_count": 3,
+    "experiment_summary_count": 5
+  },
+  "machine": {
+    "label": "ASUS ProArt PX13",
+    "machine_id": "asus-laptop",
+    "platform": {
+      "cpu": "AMD Ryzen AI 9 HX 370",
+      "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU + AMD Radeon 890M",
+      "os_family": "windows",
+      "ram_gb": 32
+    }
+  },
+  "next_actions": [
+    "Benchmark the top unobserved candidate before making it the default.",
+    "Keep AMD VGM/Vulkan checks in the readiness loop for capacity-lane models.",
+    "Use repeated benchmark evidence before changing default model rankings."
+  ],
+  "privacy": {
+    "commit_safe": true,
+    "local_paths_included": false
+  },
+  "rankings": [
+    {
+      "best_lane": {
+        "accelerator_ids": [
+          "nvidia-dgpu-0"
+        ],
+        "backend": "cuda",
+        "lane_id": "fast-nvidia",
+        "model_label": "jan-v35-4b-q4",
+        "role": "fast_chat"
+      },
+      "blockers": [],
+      "confidence": "observed",
+      "display_name": "Jan v3.5 4B Q4",
+      "evidence": {
+        "avg_latency_ms": 2166.0,
+        "avg_total_tokens": 133.0,
+        "observation_count": 5,
+        "source": "experiment_summary"
+      },
+      "family": "qwen",
+      "fit_score": 98,
+      "local_status": "local",
+      "model_id": "jan-v35-4b-q4",
+      "next_benchmark": "Run task-specific quality checks for the intended role.",
+      "parameter_size_b": 4.0,
+      "quantization": "Q4_K_XL",
+      "rank": 1,
+      "reasons": [
+        "Best current role is fast chat.",
+        "Best lane is fast-nvidia on cuda.",
+        "5 observed run(s) are available for this model label.",
+        "Capacity fit is strong for the selected lane.",
+        "Latency evidence is suitable for the recommended role."
+      ],
+      "recommended_role": "fast_chat",
+      "score_band": "excellent",
+      "score_breakdown": {
+        "capacity_fit": 25,
+        "evidence_confidence": 5,
+        "operational_readiness": 10,
+        "quality_size": 8,
+        "role_fit": 15,
+        "speed_latency": 20,
+        "stability": 15
+      }
+    },
+    {
+      "best_lane": {
+        "accelerator_ids": [
+          "amd-igpu-0"
+        ],
+        "backend": "vulkan",
+        "lane_id": "deep-amd-vgm",
+        "model_label": "qwen-27b-iq3",
+        "role": "deep_review"
+      },
+      "blockers": [
+        "requires_amd_vgm_vulkan_path"
+      ],
+      "confidence": "observed",
+      "display_name": "Qwen3.5 27B IQ3",
+      "evidence": {
+        "avg_latency_ms": 21566.6,
+        "avg_total_tokens": 273.0,
+        "observation_count": 5,
+        "source": "experiment_summary"
+      },
+      "family": "qwen",
+      "fit_score": 89,
+      "local_status": "local",
+      "model_id": "qwen-27b-iq3",
+      "next_benchmark": "Run task-specific quality checks for the intended role.",
+      "parameter_size_b": 27.0,
+      "quantization": "IQ3_M",
+      "rank": 2,
+      "reasons": [
+        "Best current role is deep review.",
+        "Best lane is deep-amd-vgm on vulkan.",
+        "5 observed run(s) are available for this model label.",
+        "Capacity fit is strong for the selected lane.",
+        "Quality prior is high for its size class."
+      ],
+      "recommended_role": "deep_review",
+      "score_band": "good",
+      "score_breakdown": {
+        "capacity_fit": 25,
+        "evidence_confidence": 5,
+        "operational_readiness": 10,
+        "quality_size": 10,
+        "role_fit": 15,
+        "speed_latency": 9,
+        "stability": 15
+      }
+    },
+    {
+      "best_lane": {
+        "accelerator_ids": [
+          "nvidia-dgpu-0"
+        ],
+        "backend": "cuda",
+        "lane_id": "fast-nvidia",
+        "model_label": "gemma-e4b-q4",
+        "role": "fast_chat"
+      },
+      "blockers": [
+        "no_observed_benchmark",
+        "model_status_candidate"
+      ],
+      "confidence": "inferred",
+      "display_name": "Gemma E4B Q4",
+      "evidence": {
+        "observation_count": 0,
+        "source": "inferred_from_inventory"
+      },
+      "family": "gemma",
+      "fit_score": 76,
+      "local_status": "candidate",
+      "model_id": "gemma-e4b-q4",
+      "next_benchmark": "Run a direct fast chat benchmark on fast-nvidia.",
+      "parameter_size_b": 4.0,
+      "quantization": "Q4",
+      "rank": 3,
+      "reasons": [
+        "Best current role is fast chat.",
+        "Best lane is fast-nvidia on cuda.",
+        "Score is inferred until this model has a direct benchmark.",
+        "Capacity fit is strong for the selected lane.",
+        "Quality prior is high for its size class."
+      ],
+      "recommended_role": "fast_chat",
+      "score_band": "usable",
+      "score_breakdown": {
+        "capacity_fit": 23,
+        "evidence_confidence": 2,
+        "operational_readiness": 6,
+        "quality_size": 10,
+        "role_fit": 15,
+        "speed_latency": 13,
+        "stability": 7
+      }
+    }
+  ],
+  "schema_version": "0.1",
+  "scorecard_id": "asus-px13-model-scorecard-example",
+  "scoring_weights": {
+    "capacity_fit": 25,
+    "evidence_confidence": 5,
+    "operational_readiness": 10,
+    "quality_size": 10,
+    "role_fit": 15,
+    "speed_latency": 20,
+    "stability": 15
+  }
+}

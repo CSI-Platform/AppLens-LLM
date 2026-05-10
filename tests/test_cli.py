@@ -369,6 +369,56 @@ def test_cli_fit_report_writes_report(tmp_path: Path) -> None:
     assert payload["runtime_recommendation"]["strategy"] == "two_lane_local"
 
 
+def test_cli_model_fit_scorecard_writes_scorecard(tmp_path: Path) -> None:
+    machine_profiles = tmp_path / "machines.jsonl"
+    candidates = tmp_path / "models.json"
+    summary = tmp_path / "summary.json"
+    output = tmp_path / "scorecard.json"
+    machine_profiles.write_text(json.dumps(_fit_machine_profile()) + "\n", encoding="utf-8")
+    candidates.write_text(
+        json.dumps(
+            {
+                "models": [
+                    {
+                        "model_id": "jan-v35-4b-q4",
+                        "display_name": "Jan v3.5 4B Q4",
+                        "family": "qwen",
+                        "parameter_size_b": 4,
+                        "quantization": "Q4_K_XL",
+                        "file_size_mb": 2860,
+                        "local_status": "local",
+                        "preferred_roles": ["fast_chat"],
+                        "quality_prior": "medium",
+                        "observed_model_label": "jan-v35-4b-q4",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    summary.write_text(json.dumps(_experiment_summary("studio", fast_ms=1100)), encoding="utf-8")
+
+    result = run_cli(
+        "model-fit-scorecard",
+        "--machine-profile",
+        str(machine_profiles),
+        "--machine-id",
+        "asus-laptop",
+        "--model-candidates",
+        str(candidates),
+        "--experiment-summary",
+        str(summary),
+        "--output",
+        str(output),
+    )
+
+    assert result.returncode == 0
+    assert "model fit scorecard" in result.stdout
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["rankings"][0]["model_id"] == "jan-v35-4b-q4"
+    assert payload["rankings"][0]["fit_score"] > 0
+
+
 def _runtime_lanes_payload() -> dict[str, object]:
     return {
         "schema_version": "0.1",

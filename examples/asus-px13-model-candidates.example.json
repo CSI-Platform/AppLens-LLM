@@ -1,0 +1,39 @@
+{
+  "models": [
+    {
+      "model_id": "jan-v35-4b-q4",
+      "display_name": "Jan v3.5 4B Q4",
+      "family": "qwen",
+      "parameter_size_b": 4,
+      "quantization": "Q4_K_XL",
+      "file_size_mb": 2860,
+      "local_status": "local",
+      "preferred_roles": ["fast_chat", "general_chat", "summarization"],
+      "quality_prior": "medium",
+      "observed_model_label": "jan-v35-4b-q4"
+    },
+    {
+      "model_id": "qwen-27b-iq3",
+      "display_name": "Qwen3.5 27B IQ3",
+      "family": "qwen",
+      "parameter_size_b": 27,
+      "quantization": "IQ3_M",
+      "file_size_mb": 11998,
+      "local_status": "local",
+      "preferred_roles": ["deep_review", "coding"],
+      "quality_prior": "high",
+      "observed_model_label": "qwen-27b-iq3"
+    },
+    {
+      "model_id": "gemma-e4b-q4",
+      "display_name": "Gemma E4B Q4",
+      "family": "gemma",
+      "parameter_size_b": 4,
+      "quantization": "Q4",
+      "file_size_mb": 3200,
+      "local_status": "candidate",
+      "preferred_roles": ["fast_chat", "summarization", "general_chat"],
+      "quality_prior": "high"
+    }
+  ]
+}
