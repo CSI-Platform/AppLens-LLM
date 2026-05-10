@@ -33,7 +33,9 @@ The contract deliberately separates memory claims from usable capacity. For exam
 
 Runtime lanes are the orchestration layer above benchmark records. A lane records an endpoint, engine, backend, model label/path, device selector, accelerator IDs, and launch hints. The first two-lane experiment can use an RTX lane and an AMD/VGM lane, but the schema is portable across future hosts and backend types.
 
-Blackboard records are the experiment ledger. They let AppLens-LLM route one task through one or more lanes, capture successes and failures, and later compare evidence without assuming that advertised capacity or a specific vendor path is inherently better.
+Blackboard records are the experiment ledger. They let AppLens-LLM route one task through one or more lanes, capture successes and failures, and later compare evidence without assuming that advertised capacity or a specific vendor path is inherently better. The blackboard is an AppLens controller/file-ledger mechanism only: lanes communicate through appended JSONL records and follow-up prompts, not through pooled VRAM, CUDA/Vulkan/ROCm shared memory, inter-GPU IPC, or proof that NVIDIA and AMD memory are one device.
+
+Fast-to-deep handoff prompts include that contract directly. If a model is asked whether lanes communicate through the blackboard, the correct distinction is yes through the JSONL ledger and controller prompts, no through GPU memory or native acceleration APIs.
 
 Model fit scorecards are the product surface above those evidence layers. They should not merely say that a machine is ready. They rank concrete local model choices, explain why each score landed where it did, and separate observed fits from inferred candidates. This lets AppLens answer "Qwen 4B is the better fast-chat fit on CUDA" and "Qwen 27B is the better deep-review capacity fit on AMD/VGM Vulkan" without pretending those lanes form one pooled VRAM device.
 

@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 
 from applens_llm.blackboard import append_event, read_events
+from applens_llm.handoff_contracts import BLACKBOARD_CONTRACT
 from applens_llm.experiments import run_two_lane_experiment, wait_for_endpoint
 
 
@@ -92,6 +93,7 @@ def test_run_two_lane_experiment_routes_fast_output_to_deep_lane(tmp_path: Path)
     assert ("start", "deep-amd-vgm") in calls
     assert ("stop", "deep-amd-vgm") in calls
     assert ("stop", "fast-nvidia") in calls
+    assert BLACKBOARD_CONTRACT in deep_event["payload"]["content"]
     assert "fast answer" in deep_event["payload"]["content"]
     assert summary["responses"]["fast"]["outcome"] == "success"
     assert summary["responses"]["deep"]["outcome"] == "success"

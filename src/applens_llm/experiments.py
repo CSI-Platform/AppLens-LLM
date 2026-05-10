@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 from urllib.request import urlopen
 
 from applens_llm.blackboard import append_event, start_experiment
+from applens_llm.handoff_contracts import BLACKBOARD_CONTRACT, build_deep_review_prompt, build_fast_lane_prompt
 from applens_llm.lane_processes import endpoint_host_port, start_lane, stop_lane
 from applens_llm.orchestrator import run_lane_once
 from applens_llm.runtime_lanes import get_lane
@@ -56,7 +57,11 @@ def run_two_lane_experiment(
         blackboard_path,
         experiment_id=experiment_id,
         event_type="task",
-        payload={"task_id": "fast-task", "prompt": prompt, "metadata": {"lane_id": fast_lane_id}},
+        payload={
+            "task_id": "fast-task",
+            "prompt": prompt,
+            "metadata": {"lane_id": fast_lane_id, "blackboard_contract": BLACKBOARD_CONTRACT},
+        },
     )
 
     try:
@@ -66,17 +71,33 @@ def run_two_lane_experiment(
                 started_lane_ids.append(lane["lane_id"])
                 wait(lane["endpoint"], timeout_seconds)
 
+        fast_prompt = build_fast_lane_prompt(
+            original_prompt=prompt,
+            fast_lane_id=fast_lane_id,
+            deep_lane_id=deep_lane_id,
+            iteration_label="Single handoff experiment",
+            fast_backend=fast_lane.get("backend"),
+            deep_backend=deep_lane.get("backend"),
+        )
         fast_event = run_fn(
             blackboard_path,
             experiment_id=experiment_id,
             task_id="fast-task",
-            prompt=prompt,
+            prompt=fast_prompt,
             lane=fast_lane,
             timeout_seconds=timeout_seconds,
             max_tokens=fast_max_tokens,
         )
         fast_content = fast_event["payload"].get("content") or fast_event["payload"].get("reasoning_content") or ""
-        deep_prompt = _build_deep_prompt(prompt, fast_content)
+        deep_prompt = build_deep_review_prompt(
+            original_prompt=prompt,
+            fast_content=fast_content,
+            fast_lane_id=fast_lane_id,
+            deep_lane_id=deep_lane_id,
+            iteration_label="Single handoff experiment",
+            fast_backend=fast_lane.get("backend"),
+            deep_backend=deep_lane.get("backend"),
+        )
         append_event(
             blackboard_path,
             experiment_id=experiment_id,
@@ -87,6 +108,7 @@ def run_two_lane_experiment(
                 "source_task_id": "fast-task",
                 "target_task_id": "deep-review",
                 "prompt": deep_prompt,
+                "blackboard_contract": BLACKBOARD_CONTRACT,
             },
         )
         deep_event = run_fn(
@@ -109,6 +131,7 @@ def run_two_lane_experiment(
         "created_at": _utc_now(),
         "lanes": {"fast": fast_lane_id, "deep": deep_lane_id},
         "driver_evidence": driver_evidence or [],
+        "blackboard_contract": BLACKBOARD_CONTRACT,
         "blackboard": str(blackboard_path),
         "responses": {
             "fast": _response_summary(fast_event),
@@ -148,14 +171,6 @@ def _health_url(endpoint: str) -> str:
     host = parsed.hostname or "127.0.0.1"
     port = f":{parsed.port}" if parsed.port else ""
     return f"{scheme}://{host}{port}/health"
-
-
-def _build_deep_prompt(original_prompt: str, fast_content: str) -> str:
-    return (
-        "Review the fast lane response. Correct hardware/runtime inaccuracies, "
-        "add capacity-focused concerns, and keep the answer concise.\n\n"
-        f"Original task:\n{original_prompt}\n\nFast lane response:\n{fast_content}"
-    )
 
 
 def _response_summary(event: dict[str, Any]) -> dict[str, Any]:

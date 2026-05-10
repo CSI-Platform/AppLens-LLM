@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from applens_llm.blackboard import append_event, read_events
+from applens_llm.handoff_contracts import BLACKBOARD_CONTRACT
 from applens_llm.overnight_loop import load_loop_prompts, run_overnight_loop
 
 
@@ -64,8 +65,15 @@ def test_run_overnight_loop_routes_multiple_fast_to_deep_handoffs(tmp_path: Path
     assert len(verdicts) == 3
     assert calls[0][0] == "loop-1-fast"
     assert calls[1][0] == "loop-1-deep"
+    assert BLACKBOARD_CONTRACT not in calls[0][2]
+    assert "Do not imply pooled VRAM or shared GPU memory" in calls[0][2]
+    assert "fast-nvidia backend=cuda" in calls[0][2]
+    assert "deep-amd-vgm backend=vulkan" in calls[0][2]
     assert "fast-nvidia answered loop-1-fast" in handoffs[0]["payload"]["prompt"]
-    assert calls[4][2] == "first task"
+    assert BLACKBOARD_CONTRACT not in handoffs[0]["payload"]["prompt"]
+    assert handoffs[0]["payload"]["blackboard_contract"] == BLACKBOARD_CONTRACT
+    assert "Do not penalize the fast lane for omitting blackboard details" in handoffs[0]["payload"]["prompt"]
+    assert "first task" in calls[4][2]
     assert json.loads(summary_path.read_text(encoding="utf-8"))["completed_iterations"] == 3
 
 

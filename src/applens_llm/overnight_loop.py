@@ -8,6 +8,7 @@ from typing import Any, Callable
 
 from applens_llm.blackboard import append_event, start_experiment
 from applens_llm.experiments import wait_for_endpoint
+from applens_llm.handoff_contracts import BLACKBOARD_CONTRACT, build_deep_review_prompt, build_fast_lane_prompt
 from applens_llm.lane_processes import start_lane, stop_lane
 from applens_llm.orchestrator import run_lane_once
 from applens_llm.runtime_lanes import get_lane
@@ -134,6 +135,7 @@ def run_overnight_loop(
         "completed_at": _utc_now(),
         "lanes": {"fast": fast_lane_id, "deep": deep_lane_id},
         "driver_evidence": driver_evidence or [],
+        "blackboard_contract": BLACKBOARD_CONTRACT,
         "blackboard": str(blackboard_path),
         "prompt_count": len(prompts),
         "max_iterations": max_iterations,
@@ -178,14 +180,26 @@ def _run_iteration(
         payload={
             "task_id": fast_task_id,
             "prompt": prompt,
-            "metadata": {"iteration_index": iteration_index, "lane_id": fast_lane["lane_id"]},
+            "metadata": {
+                "iteration_index": iteration_index,
+                "lane_id": fast_lane["lane_id"],
+                "blackboard_contract": BLACKBOARD_CONTRACT,
+            },
         },
+    )
+    fast_prompt = build_fast_lane_prompt(
+        original_prompt=prompt,
+        fast_lane_id=fast_lane["lane_id"],
+        deep_lane_id=deep_lane["lane_id"],
+        iteration_label=f"Overnight loop iteration {iteration_index}",
+        fast_backend=fast_lane.get("backend"),
+        deep_backend=deep_lane.get("backend"),
     )
     fast_event = run_fn(
         blackboard_path,
         experiment_id=experiment_id,
         task_id=fast_task_id,
-        prompt=prompt,
+        prompt=fast_prompt,
         lane=fast_lane,
         timeout_seconds=timeout_seconds,
         max_tokens=fast_max_tokens,
@@ -197,12 +211,14 @@ def _run_iteration(
         return iteration
 
     fast_content = fast_event["payload"].get("content") or fast_event["payload"].get("reasoning_content") or ""
-    deep_prompt = _build_loop_deep_prompt(
-        iteration_index=iteration_index,
+    deep_prompt = build_deep_review_prompt(
         original_prompt=prompt,
         fast_lane_id=fast_lane["lane_id"],
         deep_lane_id=deep_lane["lane_id"],
         fast_content=fast_content,
+        iteration_label=f"Overnight loop iteration {iteration_index}",
+        fast_backend=fast_lane.get("backend"),
+        deep_backend=deep_lane.get("backend"),
     )
     handoff_event = append_event(
         blackboard_path,
@@ -215,6 +231,7 @@ def _run_iteration(
             "source_task_id": fast_task_id,
             "target_task_id": deep_task_id,
             "prompt": deep_prompt,
+            "blackboard_contract": BLACKBOARD_CONTRACT,
         },
     )
     deep_event = run_fn(
@@ -271,21 +288,6 @@ def _response_summary(event: dict[str, Any]) -> dict[str, Any]:
         "reasoning_content_length": len(str(payload.get("reasoning_content", ""))),
         "usage": payload.get("usage", {}),
     }
-
-
-def _build_loop_deep_prompt(
-    *,
-    iteration_index: int,
-    original_prompt: str,
-    fast_lane_id: str,
-    deep_lane_id: str,
-    fast_content: str,
-) -> str:
-    return (
-        f"Overnight loop iteration {iteration_index}. Review the {fast_lane_id} response for the {deep_lane_id} lane. "
-        "Correct runtime, hardware, benchmark, or planning errors. Add concrete next actions. Keep it concise.\n\n"
-        f"Original task:\n{original_prompt}\n\nFast lane response:\n{fast_content}"
-    )
 
 
 def _parse_prompt_file(text: str, path: Path) -> list[str]:

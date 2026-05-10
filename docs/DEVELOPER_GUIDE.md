@@ -86,6 +86,8 @@ uv run applens-llm lane-stop --lane fast-nvidia
 
 `lane-start` writes process state to `out/runtime/lane-processes.json` and logs to `out/logs/` by default. Use `--dry-run` to inspect the generated `llama-server` command before starting a model. Do not commit blackboard output, process state, or logs; they may include model responses, runtime errors, and local endpoint details.
 
+The AppLens blackboard is an append-only JSONL evidence ledger. It is not CUDA/Vulkan/ROCm shared memory, inter-GPU IPC, pooled VRAM, or proof that two accelerators are one device. If a task asks whether lanes communicate through the blackboard, the correct answer is yes at the AppLens controller/file-ledger layer and no at the GPU memory/native API layer.
+
 For a complete fast-to-deep run, use `experiment-run`:
 
 ```powershell
@@ -101,6 +103,8 @@ uv run applens-llm overnight-loop --config out/runtime/two-lane.local.json --fas
 ```
 
 The loop appends a `task`, fast `model_response` or `failure`, `handoff`, deep `model_response` or `failure`, and `verdict` for each attempted iteration. It stops on the first fast or deep failure unless `--continue-on-failure` is set. Keep the prompt file sanitized if committed; real overnight output belongs under ignored `out/blackboard/`.
+
+The fast-lane prompt is intentionally budgeted: it should finish the core distinction before details and stay small enough for repeated handoffs. Use a larger `--deep-max-tokens` when the deep lane is expected to review scorecard, benchmark, or telemetry evidence.
 
 `--nvidia-driver-branch` records the driver family that the user sees in NVIDIA App. AppLens collects the installed NVIDIA driver version with `nvidia-smi`; it does not infer Game Ready versus Studio from the version alone. Treat any driver version or branch change as a benchmark invalidator and rerun the same experiment before comparing results.
 
