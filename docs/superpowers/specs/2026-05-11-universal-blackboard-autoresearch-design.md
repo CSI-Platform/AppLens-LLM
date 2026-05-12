@@ -87,6 +87,8 @@ Core event types:
 - `critique`
 - `memory_proposed`
 - `memory_promoted`
+- `probe_result`
+- `eval_result`
 - `verdict`
 - `failure`
 - `run_stopped`
@@ -107,10 +109,13 @@ Oracle/.applens/
   program.md
   commands.json
   metrics.json
+  probes.json
+  evals/
   schemas/
   runs/
   blackboard/
   artifacts/
+  logs/
   memory/
     proposed/
     wiki/
@@ -123,6 +128,8 @@ Committed:
 - `.applens/program.md`
 - `.applens/commands.json`
 - `.applens/metrics.json`
+- `.applens/probes.json`
+- `.applens/evals/`
 - `.applens/schemas/`
 - `.applens/memory/wiki/` only after review/promotion
 
@@ -131,6 +138,7 @@ Ignored:
 - `.applens/runs/`
 - `.applens/blackboard/`
 - `.applens/artifacts/`
+- `.applens/logs/`
 - `.applens/memory/proposed/`
 - `.applens/indexes/`
 
@@ -138,6 +146,7 @@ Meaning:
 
 - `blackboard/` is append-only run history.
 - `artifacts/` are produced evidence.
+- `logs/` contains command/runtime logs that are useful for diagnosis but not commit-safe by default.
 - `memory/proposed/` contains candidate lessons from a run.
 - `memory/wiki/` contains reviewed durable knowledge.
 - `indexes/` contains rebuildable search/index helpers.
@@ -174,6 +183,8 @@ Required concepts:
 - `program_file`
 - `commands_file`
 - `metrics_file`
+- `probes_file`
+- `evals_dir`
 - `schemas_dir`
 - `allowed_actions`
 - `blocked_actions`
@@ -207,6 +218,48 @@ Command records include:
 - `risk_level`
 
 The model may choose an allowlisted command and fill safe parameters. It may not invent a new executable action. Blocked command attempts are recorded as blackboard events.
+
+## Probes And Evals
+
+V1 should include a small eval/probe layer before any self-improvement behavior. This is the main design adjustment from the auto-improving software article: the loop only becomes useful when actions, data, logs, and pass/fail checks live close enough for an agent to inspect.
+
+`probes.json` contains fast checks derived from the workload contract and `program.md`.
+
+Probe records include:
+
+- `id`
+- `description`
+- `input`
+- `expected_command_id`
+- `expected_event_types`
+- `expected_artifact_types`
+- `rubric`
+- `max_runtime_seconds`
+
+`.applens/evals/cases.json` contains regression cases for in-distribution behavior.
+
+Eval case records include:
+
+- `id`
+- `input`
+- `rubric`
+- `expected_command_id`
+- `expected_blocked_actions`
+- `expected_artifacts`
+- `expected_blackboard_events`
+
+V1 may run probes/evals and write `probe_result` or `eval_result` blackboard events. It must not automatically edit workload code, prompts, schemas, or command allowlists based on failures. Failed probes produce evidence and proposed next steps.
+
+## Brain-Agent Skill And Command Hooks
+
+The article's `Improve`, `Hill Climb`, and `Review` loops map best to a brain-agent framework rather than the core V1 autoresearch runner.
+
+Deferred brain-agent commands:
+
+- `brain-agent improve-autoresearch`: reads probes, evals, logs, blackboard records, and artifacts; diagnoses failures; proposes changes to `program.md`, `commands.json`, schemas, probes, evals, or memory proposals.
+- `brain-agent review-drift`: checks drift between docs, workload profiles, command allowlists, schemas, manifests, examples, and blackboard event claims.
+
+These commands can be implemented as Codex/Claude/brain-agent skills around AppLens-LLM. V1 should expose enough local files, logs, and structured events for those skills to work, but should not auto-apply self-improvement patches without explicit approval.
 
 ## Program File
 
@@ -351,13 +404,14 @@ This design is complete when AppLens-LLM can:
 3. Initialize a workload `.applens/` structure.
 4. Write universal blackboard records with workload/run/artifact references.
 5. Run a fake workload command from an allowlist and block an unlisted command.
-6. Produce proposed memory updates without promoting them.
-7. Run an Oracle example dry run using safe fake or read-only artifacts.
-8. Produce workload-aware model-fit output that distinguishes supervisor, candidate, and workload roles.
+6. Validate and run simple workload probes/evals, recording pass/fail events.
+7. Produce proposed memory updates without promoting them.
+8. Run an Oracle example dry run using safe fake or read-only artifacts.
+9. Produce workload-aware model-fit output that distinguishes supervisor, candidate, and workload roles.
 
 ## Non-Goals
 
-V1 does not implement live trading, broker integrations, automatic model downloads, automatic package installation, automatic memory promotion, or frontend integration. The AppLens frontend can consume these contracts later after the backend protocol is stable.
+V1 does not implement live trading, broker integrations, automatic model downloads, automatic package installation, automatic memory promotion, automatic self-editing, hill-climb patching, or frontend integration. The AppLens frontend and brain-agent skill layer can consume these contracts later after the backend protocol is stable.
 
 ## Reference Inputs
 
