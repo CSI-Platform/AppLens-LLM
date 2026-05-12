@@ -1,0 +1,21 @@
+{
+  "commands": [
+    {
+      "allowed_parameters": {},
+      "actions": [
+        "run_backtests",
+        "write_artifacts"
+      ],
+      "command_template": "python -c \"print('fake oracle backtest ok')\"",
+      "description": "Run a safe fake Oracle backtest example.",
+      "expected_outputs": [],
+      "id": "oracle.fake_backtest",
+      "network_policy": "disabled",
+      "required_inputs": [],
+      "risk_level": "low",
+      "timeout_seconds": 30,
+      "working_directory": "."
+    }
+  ],
+  "schema_version": "0.1"
+}

@@ -1,0 +1,9 @@
+/blackboard/
+/runs/*
+!/runs/*.example.json
+/artifacts/
+/logs/
+/memory/proposed/
+/indexes/
+*.local.json
+*.jsonl

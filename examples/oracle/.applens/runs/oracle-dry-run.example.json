@@ -1,0 +1,47 @@
+{
+  "artifact_dir": ".applens/artifacts/oracle-dry-run",
+  "blackboard_path": ".applens/blackboard/oracle-dry-run.jsonl",
+  "created_at": "2026-05-11T00:00:00Z",
+  "limits": {
+    "command_timeout_seconds": 60,
+    "max_iterations": 1,
+    "max_runtime_minutes": 10
+  },
+  "memory_proposal_dir": ".applens/memory/proposed",
+  "mode": "dry_run",
+  "next_step": {
+    "command_id": "oracle.fake_backtest",
+    "parameters": {}
+  },
+  "privacy": {
+    "commit_safe": true,
+    "local_paths_included": false
+  },
+  "roles": [
+    {
+      "lane_id": null,
+      "provider": "manual-review",
+      "role": "supervisor"
+    },
+    {
+      "lane_id": "local-candidate",
+      "provider": "local-lane",
+      "role": "candidate"
+    }
+  ],
+  "run_id": "oracle-dry-run",
+  "schema_version": "0.1",
+  "self_fit": {
+    "freshness_hours": 24,
+    "required": true,
+    "skip": true,
+    "source": ".applens/runs/self-fit-latest.json"
+  },
+  "stop_conditions": [
+    "max_iterations",
+    "command_failure",
+    "blocked_action"
+  ],
+  "workload_id": "oracle",
+  "workload_root": "examples/oracle"
+}

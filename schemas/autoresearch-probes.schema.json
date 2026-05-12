@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://csi-platform.local/applens-llm/autoresearch-probes.schema.json",
+  "title": "AppLens-LLM AutoResearch Probes",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "probes"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "probes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "description",
+          "input",
+          "expected_command_id",
+          "expected_event_types",
+          "expected_artifact_types",
+          "rubric",
+          "max_runtime_seconds"
+        ],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 },
+          "input": { "type": "string", "minLength": 1 },
+          "expected_command_id": { "type": ["string", "null"] },
+          "expected_event_types": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+          },
+          "expected_artifact_types": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+          },
+          "rubric": { "type": "string", "minLength": 1 },
+          "max_runtime_seconds": { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  }
+}

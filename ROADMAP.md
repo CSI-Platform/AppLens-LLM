@@ -52,14 +52,23 @@ AppLens captures the raw machine and local AI inventory. AppLens-Tune prepares t
 - Use fit reports for executive summaries and integration with AppLens.
 - Keep runtime lanes, blackboard records, and experiment comparisons as evidence layers under the scorecard.
 
-## Milestone 4: Product Integration
+## Milestone 4: Universal AutoResearch
+
+- Add workload-owned `.applens/` contracts for profiles, programs, commands, metrics, probes, evals, schemas, runs, blackboards, artifacts, logs, proposed memory, wiki, and indexes.
+- Require `self-fit` evidence before workload loops unless explicitly skipped for dry-run/testing.
+- Execute only allowlisted commands and record blocked actions as evidence.
+- Keep blackboard events append-only and workload-neutral so Oracle and future apps can use the same protocol.
+- Treat memory/wiki as curated knowledge: proposals can be written by a run, but promotion requires an explicit command.
+- Keep V1 focused on evidence capture, probes, evals, and supervised review; do not auto-apply code, prompt, schema, command, or memory patches.
+
+## Milestone 5: Product Integration
 
 - AppLens presents the model fit meter as the main local AI view.
 - AppLens-Tune presents readiness gaps and safe improvements.
 - AppLens-LLM produces scorecards, fit reports, and benchmark recommendations.
 - Unsafe actions remain gated or unsupported until rollback and approval infrastructure exists.
 
-## Milestone 5: Training Only If Needed
+## Milestone 6: Training Only If Needed
 
 - Run Qwen3.5-2B zero-shot and few-shot baselines against scorecard and deployment-plan evals.
 - Train a small LoRA only if baseline models fail structure, policy boundaries, or model-fit judgment.

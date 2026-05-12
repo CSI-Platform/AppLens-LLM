@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://csi-platform.local/applens-llm/autoresearch-eval-cases.schema.json",
+  "title": "AppLens-LLM AutoResearch Eval Cases",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "cases"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "input",
+          "rubric",
+          "expected_command_id",
+          "expected_blocked_actions",
+          "expected_artifacts",
+          "expected_blackboard_events"
+        ],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "input": { "type": "string", "minLength": 1 },
+          "rubric": { "type": "string", "minLength": 1 },
+          "expected_command_id": { "type": ["string", "null"] },
+          "expected_blocked_actions": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+          },
+          "expected_artifacts": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+          },
+          "expected_blackboard_events": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+          }
+        }
+      }
+    }
+  }
+}

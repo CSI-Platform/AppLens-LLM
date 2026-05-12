@@ -8,6 +8,7 @@ from typing import Any
 
 from applens_llm.fit_report import load_machine_profile
 from applens_llm.schemas import validate_payload
+from applens_llm.workload_profile import load_workload_profile
 
 
 SCORING_WEIGHTS = {
@@ -29,7 +30,8 @@ def build_model_fit_scorecard(
     experiment_summaries: list[dict[str, Any]] | None = None,
     created_at: str | None = None,
     scorecard_id: str | None = None,
-    ) -> dict[str, Any]:
+    workload_profile: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     candidates = list(model_candidates or [])
     benchmarks = benchmark_records or []
     summaries = experiment_summaries or []
@@ -59,6 +61,11 @@ def build_model_fit_scorecard(
         "next_actions": _next_actions(rankings),
         "privacy": {"commit_safe": True, "local_paths_included": False},
     }
+    if workload_profile:
+        scorecard["workload"] = {
+            "workload_id": workload_profile["workload_id"],
+            "roles": workload_profile.get("model_role_needs", []),
+        }
     validate_payload("model-fit-scorecard", scorecard)
     return scorecard
 
@@ -71,6 +78,7 @@ def write_model_fit_scorecard(
     model_candidates_path: Path | None = None,
     benchmark_record_paths: list[Path] | None = None,
     experiment_summary_paths: list[Path] | None = None,
+    workload_profile_path: Path | None = None,
     created_at: str | None = None,
     scorecard_id: str | None = None,
 ) -> dict[str, Any]:
@@ -79,6 +87,7 @@ def write_model_fit_scorecard(
         model_candidates=load_model_candidates(model_candidates_path) if model_candidates_path else None,
         benchmark_records=[_load_json(path) for path in benchmark_record_paths or []],
         experiment_summaries=[_load_json(path) for path in experiment_summary_paths or []],
+        workload_profile=load_workload_profile(workload_profile_path) if workload_profile_path else None,
         created_at=created_at,
         scorecard_id=scorecard_id,
     )

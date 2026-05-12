@@ -5,6 +5,11 @@ import json
 from pathlib import Path
 
 from applens_llm.adrenalin_telemetry import write_hardware_summary
+from applens_llm.autoresearch_eval import run_autoresearch_eval
+from applens_llm.autoresearch_layout import init_workload_layout
+from applens_llm.autoresearch_manifest import write_self_fit_result
+from applens_llm.autoresearch_memory import promote_memory
+from applens_llm.autoresearch_runner import run_autoresearch_once
 from applens_llm.bench import run_openai_chat_benchmark
 from applens_llm.blackboard import append_event, start_experiment
 from applens_llm.capture_ingest import write_capture_records_jsonl
@@ -36,6 +41,38 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "validate-jsonl":
             rows = validate_jsonl_file(args.schema, args.path)
             print(f"{args.path} {len(rows)} rows valid")
+            return 0
+        if args.command == "autoresearch" and args.autoresearch_command == "init":
+            paths = init_workload_layout(args.workload_root, workload_id=args.workload_id, display_name=args.display_name)
+            print(f"autoresearch layout -> {paths.applens_dir}")
+            return 0
+        if args.command == "autoresearch" and args.autoresearch_command == "self-fit":
+            result = write_self_fit_result(
+                args.workload_root,
+                machine_fingerprint=args.machine_fingerprint,
+                runtime_fingerprint=args.runtime_fingerprint,
+                status=args.status,
+            )
+            print(f"autoresearch self-fit -> status={result['status']}")
+            return 0
+        if args.command == "autoresearch" and args.autoresearch_command == "run":
+            summary = run_autoresearch_once(
+                args.workload_root,
+                manifest_path=args.manifest,
+                skip_self_fit=args.skip_self_fit,
+            )
+            print(f"autoresearch run -> outcome={summary['outcome']}")
+            return 0
+        if args.command == "autoresearch" and args.autoresearch_command == "eval":
+            summary = run_autoresearch_eval(args.workload_root, run_id=args.run_id)
+            print(
+                f"autoresearch eval -> probes={summary['probes']} cases={summary['cases']} "
+                f"passed={summary['passed']} failed={summary['failed']}"
+            )
+            return 0
+        if args.command == "autoresearch" and args.autoresearch_command == "promote-memory":
+            target = promote_memory(args.workload_root, args.proposal)
+            print(f"memory promoted -> {target}")
             return 0
         if args.command == "bench":
             driver_evidence = collect_nvidia_driver_evidence(driver_branch=args.nvidia_driver_branch)
@@ -284,6 +321,7 @@ def main(argv: list[str] | None = None) -> int:
                 model_candidates_path=args.model_candidates,
                 benchmark_record_paths=args.benchmark_record,
                 experiment_summary_paths=args.experiment_summary,
+                workload_profile_path=args.workload_profile,
                 scorecard_id=args.scorecard_id,
                 output_path=args.output,
             )
@@ -330,6 +368,33 @@ def _build_parser() -> argparse.ArgumentParser:
     validate_jsonl = subparsers.add_parser("validate-jsonl")
     validate_jsonl.add_argument("--schema", required=True)
     validate_jsonl.add_argument("path", type=Path)
+
+    autoresearch = subparsers.add_parser("autoresearch")
+    autoresearch_sub = autoresearch.add_subparsers(dest="autoresearch_command")
+
+    autoresearch_init = autoresearch_sub.add_parser("init")
+    autoresearch_init.add_argument("--workload-root", type=Path, required=True)
+    autoresearch_init.add_argument("--workload-id", required=True)
+    autoresearch_init.add_argument("--display-name", required=True)
+
+    autoresearch_self_fit = autoresearch_sub.add_parser("self-fit")
+    autoresearch_self_fit.add_argument("--workload-root", type=Path, required=True)
+    autoresearch_self_fit.add_argument("--machine-fingerprint", required=True)
+    autoresearch_self_fit.add_argument("--runtime-fingerprint", required=True)
+    autoresearch_self_fit.add_argument("--status", choices=["passed", "failed"], default="passed")
+
+    autoresearch_run = autoresearch_sub.add_parser("run")
+    autoresearch_run.add_argument("--workload-root", type=Path, required=True)
+    autoresearch_run.add_argument("--manifest", type=Path, required=True)
+    autoresearch_run.add_argument("--skip-self-fit", action="store_true")
+
+    autoresearch_eval = autoresearch_sub.add_parser("eval")
+    autoresearch_eval.add_argument("--workload-root", type=Path, required=True)
+    autoresearch_eval.add_argument("--run-id", default="autoresearch-eval")
+
+    autoresearch_promote = autoresearch_sub.add_parser("promote-memory")
+    autoresearch_promote.add_argument("--workload-root", type=Path, required=True)
+    autoresearch_promote.add_argument("--proposal", type=Path, required=True)
 
     bench = subparsers.add_parser("bench")
     bench.add_argument("--endpoint", default="http://127.0.0.1:1337/v1")
@@ -498,6 +563,7 @@ def _build_parser() -> argparse.ArgumentParser:
     model_fit_scorecard.add_argument("--model-candidates", type=Path)
     model_fit_scorecard.add_argument("--benchmark-record", type=Path, action="append", default=[])
     model_fit_scorecard.add_argument("--experiment-summary", type=Path, action="append", default=[])
+    model_fit_scorecard.add_argument("--workload-profile", type=Path)
     model_fit_scorecard.add_argument("--scorecard-id")
     model_fit_scorecard.add_argument("--output", type=Path, required=True)
 

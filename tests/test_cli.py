@@ -430,6 +430,7 @@ def test_cli_model_fit_scorecard_writes_scorecard(tmp_path: Path) -> None:
     machine_profiles = tmp_path / "machines.jsonl"
     candidates = tmp_path / "models.json"
     summary = tmp_path / "summary.json"
+    workload = tmp_path / "workload.json"
     output = tmp_path / "scorecard.json"
     machine_profiles.write_text(json.dumps(_fit_machine_profile()) + "\n", encoding="utf-8")
     candidates.write_text(
@@ -454,6 +455,7 @@ def test_cli_model_fit_scorecard_writes_scorecard(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     summary.write_text(json.dumps(_experiment_summary("studio", fast_ms=1100)), encoding="utf-8")
+    workload.write_text(json.dumps(_workload_profile()), encoding="utf-8")
 
     result = run_cli(
         "model-fit-scorecard",
@@ -465,6 +467,8 @@ def test_cli_model_fit_scorecard_writes_scorecard(tmp_path: Path) -> None:
         str(candidates),
         "--experiment-summary",
         str(summary),
+        "--workload-profile",
+        str(workload),
         "--output",
         str(output),
     )
@@ -474,6 +478,7 @@ def test_cli_model_fit_scorecard_writes_scorecard(tmp_path: Path) -> None:
     payload = json.loads(output.read_text(encoding="utf-8"))
     assert payload["rankings"][0]["model_id"] == "jan-v35-4b-q4"
     assert payload["rankings"][0]["fit_score"] > 0
+    assert payload["workload"]["workload_id"] == "oracle"
 
 
 def test_cli_model_fit_html_writes_sortable_report(tmp_path: Path) -> None:
@@ -633,6 +638,31 @@ def _fit_machine_profile() -> dict[str, object]:
             "sanitized": True,
         },
         "notes": "Sanitized unit-test profile.",
+    }
+
+
+def _workload_profile() -> dict[str, object]:
+    return {
+        "schema_version": "0.1",
+        "workload_id": "oracle",
+        "display_name": "Oracle",
+        "workload_type": "financial_research",
+        "program_file": ".applens/program.md",
+        "commands_file": ".applens/commands.json",
+        "metrics_file": ".applens/metrics.json",
+        "probes_file": ".applens/probes.json",
+        "evals_dir": ".applens/evals",
+        "schemas_dir": ".applens/schemas",
+        "allowed_actions": ["read_local_data", "write_artifacts"],
+        "blocked_actions": ["credential_access", "system_change"],
+        "required_artifacts": ["run_summary"],
+        "model_role_needs": [{"role": "supervisor", "capabilities": ["reasoning"]}],
+        "safety_gates": {
+            "requires_self_fit": True,
+            "allow_network": False,
+            "allow_writes_outside_workload_root": False,
+            "allow_live_trading": False,
+        },
     }
 
 

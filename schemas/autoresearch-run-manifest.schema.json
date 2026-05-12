@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://csi-platform.local/applens-llm/autoresearch-run-manifest.schema.json",
+  "title": "AppLens-LLM AutoResearch Run Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "workload_id",
+    "mode",
+    "created_at",
+    "workload_root",
+    "blackboard_path",
+    "artifact_dir",
+    "memory_proposal_dir",
+    "self_fit",
+    "roles",
+    "limits",
+    "stop_conditions",
+    "privacy"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "run_id": { "type": "string", "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]*$" },
+    "workload_id": { "type": "string", "pattern": "^[a-z][a-z0-9_.-]*$" },
+    "mode": { "type": "string", "enum": ["self_fit", "workload", "dry_run"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "workload_root": { "type": "string", "minLength": 1 },
+    "blackboard_path": { "type": "string", "minLength": 1 },
+    "artifact_dir": { "type": "string", "minLength": 1 },
+    "memory_proposal_dir": { "type": "string", "minLength": 1 },
+    "self_fit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "skip", "freshness_hours", "source"],
+      "properties": {
+        "required": { "type": "boolean" },
+        "skip": { "type": "boolean" },
+        "freshness_hours": { "type": "integer", "minimum": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "machine_fingerprint": { "type": "string", "minLength": 1 },
+        "runtime_fingerprint": { "type": "string", "minLength": 1 }
+      }
+    },
+    "roles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "provider", "lane_id"],
+        "properties": {
+          "role": { "type": "string", "minLength": 1 },
+          "provider": {
+            "type": "string",
+            "enum": ["codex-current-session", "claude-code", "openai-api", "local-lane", "manual-review"]
+          },
+          "lane_id": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_iterations", "max_runtime_minutes", "command_timeout_seconds"],
+      "properties": {
+        "max_iterations": { "type": "integer", "minimum": 1 },
+        "max_runtime_minutes": { "type": "number", "exclusiveMinimum": 0 },
+        "command_timeout_seconds": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "stop_conditions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "next_step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command_id", "parameters"],
+      "properties": {
+        "command_id": { "type": "string", "minLength": 1 },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "number", "integer", "boolean", "null"]
+          }
+        }
+      }
+    },
+    "privacy": { "$ref": "#/$defs/privacy" }
+  },
+  "$defs": {
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit_safe", "local_paths_included"],
+      "properties": {
+        "commit_safe": { "type": "boolean" },
+        "local_paths_included": { "type": "boolean" }
+      }
+    }
+  }
+}

@@ -81,6 +81,29 @@
       "minItems": 1,
       "items": { "type": "string", "minLength": 1 }
     },
+    "workload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workload_id", "roles"],
+      "properties": {
+        "workload_id": { "type": "string" },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["role", "capabilities"],
+            "properties": {
+              "role": { "type": "string" },
+              "capabilities": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
     "privacy": {
       "type": "object",
       "additionalProperties": false,

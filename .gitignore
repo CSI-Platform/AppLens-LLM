@@ -13,3 +13,11 @@ out/
 data/private/
 data/raw/
 *.jsonl.local
+
+**/.applens/blackboard/
+**/.applens/runs/*
+!**/.applens/runs/*.example.json
+**/.applens/artifacts/
+**/.applens/logs/
+**/.applens/memory/proposed/
+**/.applens/indexes/

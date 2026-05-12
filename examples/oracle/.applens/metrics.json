@@ -1,0 +1,10 @@
+{
+  "direction": "higher_is_better",
+  "primary_metric": "risk_adjusted_return_after_costs",
+  "required_checks": [
+    "sample_size",
+    "transaction_costs",
+    "train_test_split"
+  ],
+  "schema_version": "0.1"
+}

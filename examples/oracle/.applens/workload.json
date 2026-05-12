@@ -1,0 +1,65 @@
+{
+  "allowed_actions": [
+    "read_local_data",
+    "write_artifacts",
+    "run_backtests",
+    "write_reports"
+  ],
+  "blocked_actions": [
+    "live_trade",
+    "broker_order",
+    "credential_access",
+    "system_change",
+    "model_download",
+    "driver_change",
+    "service_change",
+    "firewall_change"
+  ],
+  "commands_file": ".applens/commands.json",
+  "display_name": "Oracle",
+  "evals_dir": ".applens/evals",
+  "metrics_file": ".applens/metrics.json",
+  "model_role_needs": [
+    {
+      "capabilities": [
+        "reasoning",
+        "safety_review",
+        "experiment_selection"
+      ],
+      "role": "supervisor"
+    },
+    {
+      "capabilities": [
+        "small_model_legible_tasks",
+        "read_blackboard",
+        "write_artifacts"
+      ],
+      "role": "candidate"
+    },
+    {
+      "capabilities": [
+        "allowlisted_commands",
+        "backtest_execution"
+      ],
+      "role": "workload_executor"
+    }
+  ],
+  "probes_file": ".applens/probes.json",
+  "program_file": ".applens/program.md",
+  "required_artifacts": [
+    "strategy_candidate",
+    "backtest_result",
+    "risk_review",
+    "research_report"
+  ],
+  "safety_gates": {
+    "allow_live_trading": false,
+    "allow_network": false,
+    "allow_writes_outside_workload_root": false,
+    "requires_self_fit": true
+  },
+  "schema_version": "0.1",
+  "schemas_dir": ".applens/schemas",
+  "workload_id": "oracle",
+  "workload_type": "financial_research"
+}

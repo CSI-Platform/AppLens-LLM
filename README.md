@@ -106,12 +106,53 @@ Committed lane examples must stay sanitized. Put machine-specific binaries, loca
 
 Driver branch is runtime evidence. NVIDIA describes Game Ready drivers as game-focused and Studio drivers as reliability-focused for creative workflows; both can run games and creative apps. AppLens records the branch reported by the user plus the version from `nvidia-smi`, and a branch or version change means benchmark comparisons should be rerun instead of treated as equivalent.
 
+## AutoResearch
+
+AppLens-LLM has two chronological autoresearch modes:
+
+1. `self-fit`: prove the local model/runtime setup for this machine.
+2. `workload`: run a bounded workload loop such as Oracle using explicit allowlists.
+
+Workload repos meet AppLens-LLM through `.applens/` files. Stable contracts are committed; run logs, artifacts, blackboards, proposed memory, and indexes stay local and ignored. V1 records probes, evals, logs, artifacts, and blackboard evidence so a supervisor can diagnose failures, but it does not auto-apply code, prompt, schema, command, or memory patches. It rejects commands that declare network access, but it does not provide an OS network sandbox.
+
+Initialize a workload layout:
+
+```powershell
+uv run applens-llm autoresearch init --workload-root ../Oracle --workload-id oracle --display-name Oracle
+```
+
+Record a local self-fit result after the model/runtime path has been checked:
+
+```powershell
+uv run applens-llm autoresearch self-fit --workload-root ../Oracle --machine-fingerprint machine-a --runtime-fingerprint llama-cpp-cuda
+```
+
+Run one bounded workload step from an allowlisted manifest:
+
+```powershell
+uv run applens-llm autoresearch run --workload-root examples/oracle --manifest examples/oracle/.applens/runs/oracle-dry-run.example.json --skip-self-fit
+```
+
+Read committed probes and eval cases:
+
+```powershell
+uv run applens-llm autoresearch eval --workload-root examples/oracle
+```
+
+This writes `probe_result` and `eval_result` blackboard events for the contract-level checks it runs.
+
+Promote proposed memory only after review:
+
+```powershell
+uv run applens-llm autoresearch promote-memory --workload-root ../Oracle --proposal ../Oracle/.applens/memory/proposed/example.md
+```
+
 ## Model Fit Scorecards
 
 `model-fit-scorecard` is the primary product artifact. It reads a machine profile, optional model candidate inventory, benchmark records, and experiment summaries, then ranks model choices out of 100:
 
 ```powershell
-uv run applens-llm model-fit-scorecard --machine-profile data/machines.seed.jsonl --machine-id asus-laptop --model-candidates examples/asus-px13-model-candidates.example.json --experiment-summary out/blackboard/exp-studio-summary.json --output out/scorecards/asus-px13-model-scorecard.json
+uv run applens-llm model-fit-scorecard --machine-profile data/machines.seed.jsonl --machine-id asus-laptop --model-candidates examples/asus-px13-model-candidates.example.json --workload-profile examples/oracle/.applens/workload.json --experiment-summary out/blackboard/exp-studio-summary.json --output out/scorecards/asus-px13-model-scorecard.json
 ```
 
 Each ranking includes the recommended role, best lane/backend/device, score breakdown, observed or inferred confidence, reasons, blockers, and next benchmark. Generated scorecards belong under ignored `out/`; committed examples must stay sanitized.

@@ -17,6 +17,7 @@ def test_build_model_fit_scorecard_ranks_observed_and_candidate_models() -> None
     )
 
     validate_payload("model-fit-scorecard", scorecard)
+    assert "workload" not in scorecard
     rankings = {row["model_id"]: row for row in scorecard["rankings"]}
 
     assert rankings["jan-v35-4b-q4"]["fit_score"] >= 80
@@ -98,6 +99,26 @@ def test_failed_benchmark_record_is_not_ranked_as_ready() -> None:
     assert top["score_band"] in {"experimental", "not_recommended"}
     assert "observed_failure" in top["blockers"]
     assert top["score_breakdown"]["speed_latency"] == 0
+
+
+def test_model_fit_scorecard_includes_workload_role_guidance() -> None:
+    scorecard = build_model_fit_scorecard(
+        machine_profile=_machine_profile(),
+        model_candidates=_model_candidates(),
+        created_at="2026-05-10T01:00:00Z",
+        scorecard_id="scorecard-oracle",
+        workload_profile={
+            "workload_id": "oracle",
+            "model_role_needs": [
+                {"role": "supervisor", "capabilities": ["reasoning"]},
+                {"role": "workload_executor", "capabilities": ["allowlisted_commands"]},
+            ],
+        },
+    )
+
+    validate_payload("model-fit-scorecard", scorecard)
+    assert scorecard["workload"]["workload_id"] == "oracle"
+    assert any(role["role"] == "supervisor" for role in scorecard["workload"]["roles"])
 
 
 def _model_candidates() -> list[dict]:

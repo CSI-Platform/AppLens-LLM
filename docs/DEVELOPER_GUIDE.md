@@ -118,12 +118,43 @@ uv run applens-llm experiment-compare --baseline out/blackboard/exp-game-ready-s
 
 The comparison reports driver branch/version, lane equality, per-lane latency deltas, token-count deltas, latency per token, and warnings such as `token_counts_differ`. Treat a single comparison as directional evidence unless repeated runs show the same pattern.
 
+## Run AutoResearch Workloads
+
+AutoResearch is chronological:
+
+1. Run `self-fit` to prove the local model/runtime path for this machine.
+2. Run a bounded `workload` loop from a manifest.
+
+Initialize a workload-owned `.applens/` folder:
+
+```powershell
+uv run applens-llm autoresearch init --workload-root ../Oracle --workload-id oracle --display-name Oracle
+```
+
+Validate the committed Oracle example:
+
+```powershell
+uv run applens-llm validate --schema workload-profile examples/oracle/.applens/workload.json
+uv run applens-llm validate --schema autoresearch-run-manifest examples/oracle/.applens/runs/oracle-dry-run.example.json
+uv run applens-llm autoresearch eval --workload-root examples/oracle
+```
+
+`autoresearch eval` records contract-level `probe_result` and `eval_result` events under the workload blackboard, with pass/fail counts in stdout.
+
+Run the safe dry-run manifest:
+
+```powershell
+uv run applens-llm autoresearch run --workload-root examples/oracle --manifest examples/oracle/.applens/runs/oracle-dry-run.example.json --skip-self-fit
+```
+
+V1 command execution is allowlist-only. Live trades, broker orders, credential access, system changes, model downloads, driver/service/firewall changes, and automatic memory promotion are blocked. A command that declares network access is rejected, but V1 does not provide an OS network sandbox; only run trusted workload contracts. The eval/probe layer records pass/fail evidence. Code, prompt, schema, command, and memory edits require explicit approval.
+
 ## Write A Model Fit Scorecard
 
 Use `model-fit-scorecard` as the first user-facing local AI artifact. It ranks candidate models by score, role, best backend/device lane, confidence, reasons, blockers, and next benchmark:
 
 ```powershell
-uv run applens-llm model-fit-scorecard --machine-profile data/machines.seed.jsonl --machine-id asus-laptop --model-candidates examples/asus-px13-model-candidates.example.json --experiment-summary out/blackboard/exp-studio-summary.json --output out/scorecards/asus-px13-model-scorecard.json
+uv run applens-llm model-fit-scorecard --machine-profile data/machines.seed.jsonl --machine-id asus-laptop --model-candidates examples/asus-px13-model-candidates.example.json --workload-profile examples/oracle/.applens/workload.json --experiment-summary out/blackboard/exp-studio-summary.json --output out/scorecards/asus-px13-model-scorecard.json
 ```
 
 Inputs are additive. A candidate inventory gives the scorecard models to rank, experiment summaries provide lane-level observed evidence, and benchmark records provide direct backend/device proof. If a candidate has no direct evidence, the scorecard can infer a provisional lane from model size and accelerator capacity, but it must mark confidence as `inferred` and include `no_observed_benchmark`.

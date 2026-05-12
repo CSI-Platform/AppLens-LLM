@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://csi-platform.local/applens-llm/examples/oracle-backtest-result.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "hypothesis": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "outcome": {
+      "enum": [
+        "pass",
+        "fail",
+        "inconclusive"
+      ],
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "0.1",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "hypothesis",
+    "outcome"
+  ],
+  "title": "Oracle Backtest Result",
+  "type": "object"
+}

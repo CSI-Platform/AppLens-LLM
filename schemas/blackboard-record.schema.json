@@ -7,11 +7,20 @@
   "required": [
     "schema_version",
     "event_id",
-    "experiment_id",
     "event_type",
     "created_at",
     "payload",
     "privacy"
+  ],
+  "anyOf": [
+    { "required": ["experiment_id"] },
+    { "required": ["workload_id", "run_id"] }
+  ],
+  "allOf": [
+    {
+      "if": { "required": ["workload_id", "run_id"] },
+      "then": { "required": ["actor", "artifacts"] }
+    }
   ],
   "properties": {
     "schema_version": { "type": "string", "const": "0.1" },
@@ -23,6 +32,24 @@
       "type": "string",
       "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]*$"
     },
+    "workload_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]*$"
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]*$"
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role"],
+      "properties": {
+        "role": { "type": "string", "minLength": 1 },
+        "lane_id": { "type": ["string", "null"] },
+        "provider": { "type": ["string", "null"] }
+      }
+    },
     "event_type": {
       "type": "string",
       "enum": [
@@ -32,13 +59,40 @@
         "handoff",
         "benchmark_reference",
         "failure",
-        "verdict"
+        "verdict",
+        "run_started",
+        "run_finished",
+        "self_fit_result",
+        "proposal",
+        "command_started",
+        "command_result",
+        "command_blocked",
+        "artifact_created",
+        "memory_proposed",
+        "memory_promoted",
+        "probe_result",
+        "eval_result",
+        "critique"
       ]
     },
     "created_at": { "type": "string", "format": "date-time" },
     "payload": {
       "type": "object",
       "additionalProperties": true
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["artifact_id", "artifact_type", "path"],
+        "properties": {
+          "artifact_id": { "type": "string", "minLength": 1 },
+          "artifact_type": { "type": "string", "minLength": 1 },
+          "path": { "type": "string", "minLength": 1 },
+          "summary": { "type": "string" }
+        }
+      }
     },
     "privacy": {
       "type": "object",

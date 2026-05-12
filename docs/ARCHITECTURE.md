@@ -17,6 +17,10 @@ V1 may start a user-owned local model runtime and write benchmark logs. It may r
 - `schemas/hardware-topology.schema.json`: accelerator inventory, memory claims, and usable inference capacity evidence.
 - `schemas/runtime-lanes.schema.json`: portable local runtime lane configs for CUDA, Vulkan, ROCm/HIP, Metal, DirectML, CPU, RPC, and OpenAI-compatible endpoints.
 - `schemas/blackboard-record.schema.json`: append-only experiment events for tasks, handoffs, responses, failures, benchmark references, and verdicts.
+- `schemas/workload-profile.schema.json`: workload-owned `.applens/` adapter contract with actions, artifacts, model role needs, and safety gates.
+- `schemas/autoresearch-run-manifest.schema.json`: one bounded self-fit, workload, or dry-run loop.
+- `schemas/workload-artifact.schema.json`: evidence references produced by workload loops.
+- `schemas/autoresearch-probes.schema.json` and `schemas/autoresearch-eval-cases.schema.json`: committed probes and regression cases for workload behavior.
 - `schemas/model-fit-scorecard.schema.json`: primary product artifact for ranking local models by score, role, backend/device lane, blockers, and confidence.
 - `schemas/deployment-plan.schema.json`: strict output target for the first AppLens-Tailor model.
 - `schemas/benchmark-record.schema.json`: benchmark proof attached to a recommendation.
@@ -37,6 +41,8 @@ Blackboard records are the experiment ledger. They let AppLens-LLM route one tas
 
 Fast-to-deep handoff prompts include that contract directly. If a model is asked whether lanes communicate through the blackboard, the correct distinction is yes through the JSONL ledger and controller prompts, no through GPU memory or native acceleration APIs.
 
+AutoResearch uses the same blackboard idea as a universal workload event protocol. Blackboard is append-only run evidence. Memory/wiki is curated durable knowledge. Workloads such as Oracle own domain code and expose allowlisted commands through `.applens/commands.json`; AppLens-LLM reads those contracts, executes only approved commands, and writes proposed memory without promoting it automatically.
+
 Model fit scorecards are the product surface above those evidence layers. They should not merely say that a machine is ready. They rank concrete local model choices, explain why each score landed where it did, and separate observed fits from inferred candidates. This lets AppLens answer "Qwen 4B is the better fast-chat fit on CUDA" and "Qwen 27B is the better deep-review capacity fit on AMD/VGM Vulkan" without pretending those lanes form one pooled VRAM device.
 
 The JSON scorecard is the durable contract. Static HTML reports are generated views for humans: sortable/filterable tables over the scorecard plus optional experiment comparisons. HTML should not become the canonical data format.
@@ -52,8 +58,9 @@ The JSON scorecard is the durable contract. Static HTML reports are generated vi
 7. Produce a model fit scorecard.
 8. Generate an HTML view when a user needs sortable inspection.
 9. Produce a fit report or deployment plan when the workflow needs a summary or executable target.
-10. Validate generated artifacts against schema and policy.
-11. Gate training, downloads, service changes, and network exposure.
+10. For AutoResearch, run `self-fit` before workload loops unless explicitly skipped for dry-run/testing.
+11. Validate generated artifacts against schema and policy.
+12. Gate training, downloads, service changes, and network exposure.
 
 ## First Model Target
 
