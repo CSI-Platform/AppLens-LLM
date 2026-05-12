@@ -4,7 +4,7 @@ Date: 2026-05-11
 
 ## Decision
 
-AppLens-LLM will own the universal blackboard, memory/wiki, self-fit, and autoresearch engine inside this repo for V1. Workload apps such as Oracle will meet AppLens-LLM through stable files, schemas, command allowlists, artifacts, and blackboard events. The protocol can be extracted later if Oracle proves it is useful beyond AppLens-LLM.
+AppLens-LLM will own the universal blackboard, memory/wiki, self-fit, and autoresearch engine inside this repo for V1. Workload apps such as Oracle will meet AppLens-LLM through stable files, schemas, command allowlists, artifacts, and blackboard events.
 
 The product boundary is:
 
@@ -151,7 +151,7 @@ Meaning:
 - `memory/wiki/` contains reviewed durable knowledge.
 - `indexes/` contains rebuildable search/index helpers.
 
-Memory promotion is not automatic in V1. Runs write proposed memory updates. A later explicit command or user approval promotes them into the wiki.
+Memory promotion is not automatic in V1. Runs write proposed memory updates. Only an explicit command or user approval promotes them into the wiki.
 
 ## Small-Model Legibility
 
@@ -250,16 +250,9 @@ Eval case records include:
 
 V1 may run probes/evals and write `probe_result` or `eval_result` blackboard events. It must not automatically edit workload code, prompts, schemas, or command allowlists based on failures. Failed probes produce evidence and proposed next steps.
 
-## Brain-Agent Skill And Command Hooks
+## Auto-Improvement Boundary
 
-The article's `Improve`, `Hill Climb`, and `Review` loops map best to a brain-agent framework rather than the core V1 autoresearch runner.
-
-Deferred brain-agent commands:
-
-- `brain-agent improve-autoresearch`: reads probes, evals, logs, blackboard records, and artifacts; diagnoses failures; proposes changes to `program.md`, `commands.json`, schemas, probes, evals, or memory proposals.
-- `brain-agent review-drift`: checks drift between docs, workload profiles, command allowlists, schemas, manifests, examples, and blackboard event claims.
-
-These commands can be implemented as Codex/Claude/brain-agent skills around AppLens-LLM. V1 should expose enough local files, logs, and structured events for those skills to work, but should not auto-apply self-improvement patches without explicit approval.
+V1 records enough local files, logs, probes, evals, blackboard events, and artifacts for a supervisor to diagnose failures. V1 does not auto-apply self-improvement patches. If a supervisor finds drift or failed probes, it writes evidence and proposed next steps; code, prompt, schema, command, and memory changes still require explicit approval.
 
 ## Program File
 
@@ -411,7 +404,7 @@ This design is complete when AppLens-LLM can:
 
 ## Non-Goals
 
-V1 does not implement live trading, broker integrations, automatic model downloads, automatic package installation, automatic memory promotion, automatic self-editing, hill-climb patching, or frontend integration. The AppLens frontend and brain-agent skill layer can consume these contracts later after the backend protocol is stable.
+V1 does not implement live trading, broker integrations, automatic model downloads, automatic package installation, automatic memory promotion, automatic self-editing, hill-climb patching, or frontend integration.
 
 ## Reference Inputs
 

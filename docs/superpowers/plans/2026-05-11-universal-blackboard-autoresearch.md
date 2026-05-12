@@ -2039,7 +2039,7 @@ AppLens-LLM has two chronological autoresearch modes:
 
 Workload repos meet AppLens-LLM through `.applens/` files. Stable contracts are committed; run logs, artifacts, blackboards, proposed memory, and indexes are ignored.
 
-Probes and eval cases are committed beside the workload profile. Brain-agent `improve-autoresearch` and `review-drift` commands can later consume probes, evals, logs, artifacts, and blackboard records, but V1 does not auto-apply self-improvement patches.
+Probes and eval cases are committed beside the workload profile. V1 records enough probes, evals, logs, artifacts, and blackboard records for a supervisor to diagnose failures, but it does not auto-apply self-improvement patches.
 ```
 
 Include example CLI commands for `autoresearch init`, `autoresearch run`, and `autoresearch promote-memory`.
@@ -2059,7 +2059,7 @@ Add commands and note:
 ```md
 V1 command execution is allowlist-only. Live trades, broker orders, credential access, system changes, model downloads, driver/service/firewall changes, and automatic memory promotion are blocked.
 
-The eval/probe layer records pass/fail evidence. Improve and review-drift loops belong in the brain-agent skill layer until explicit approval exists for automated edits.
+The eval/probe layer records pass/fail evidence. Code, prompt, schema, command, and memory edits require explicit approval.
 ```
 
 - [ ] **Step 4: Run docs-adjacent validation**
