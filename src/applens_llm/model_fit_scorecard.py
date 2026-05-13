@@ -29,6 +29,7 @@ def build_model_fit_scorecard(
     machine_profile: dict[str, Any],
     model_candidates: list[dict[str, Any]] | None = None,
     benchmark_records: list[dict[str, Any]] | None = None,
+    benchmark_suite_results: list[dict[str, Any]] | None = None,
     experiment_summaries: list[dict[str, Any]] | None = None,
     capability_records: list[dict[str, Any]] | None = None,
     context_envelopes: list[dict[str, Any]] | None = None,
@@ -38,17 +39,20 @@ def build_model_fit_scorecard(
 ) -> dict[str, Any]:
     candidates = list(model_candidates or [])
     benchmarks = benchmark_records or []
+    suite_results = benchmark_suite_results or []
     summaries = experiment_summaries or []
     capabilities = capability_records or []
     context_index = _context_by_model(context_envelopes or [])
+    suite_index = _suite_results_by_model(suite_results)
     observations = _observations_by_model(summaries, benchmarks)
     capability_index = _capabilities_by_model(capabilities)
-    candidates = _merge_observed_candidates(candidates, observations)
+    candidates = _merge_observed_candidates(candidates, observations, suite_index)
     lane_index = _lane_index(summaries, benchmarks)
     rankings = [
         _score_candidate(
             candidate,
             observations.get(_candidate_observed_label(candidate), []),
+            suite_index.get(_candidate_observed_label(candidate), []),
             capability_index.get(_candidate_observed_label(candidate), []),
             context_index.get(_candidate_observed_label(candidate)),
             lane_index,
@@ -67,9 +71,11 @@ def build_model_fit_scorecard(
         "machine": _machine_summary(machine_profile),
         "scoring_weights": SCORING_WEIGHTS,
         "rankings": rankings,
+        "benchmark_suites": _benchmark_suite_summaries(suite_results),
         "evidence": {
             "experiment_summary_count": len(summaries),
             "benchmark_record_count": len(benchmarks),
+            "benchmark_suite_result_count": len(suite_results),
             "capability_record_count": len(capabilities),
             "candidate_model_count": len(candidates),
         },
@@ -92,6 +98,7 @@ def write_model_fit_scorecard(
     machine_id: str | None = None,
     model_candidates_path: Path | None = None,
     benchmark_record_paths: list[Path] | None = None,
+    benchmark_suite_result_paths: list[Path] | None = None,
     experiment_summary_paths: list[Path] | None = None,
     capability_record_paths: list[Path] | None = None,
     context_envelope_paths: list[Path] | None = None,
@@ -103,6 +110,7 @@ def write_model_fit_scorecard(
         machine_profile=load_machine_profile(machine_profile_path, machine_id=machine_id),
         model_candidates=load_model_candidates(model_candidates_path) if model_candidates_path else None,
         benchmark_records=[_load_json(path) for path in benchmark_record_paths or []],
+        benchmark_suite_results=[_load_json(path) for path in benchmark_suite_result_paths or []],
         experiment_summaries=[_load_json(path) for path in experiment_summary_paths or []],
         capability_records=[_load_json(path) for path in capability_record_paths or []],
         context_envelopes=[_load_json(path) for path in context_envelope_paths or []],
@@ -244,25 +252,101 @@ def _context_by_model(envelopes: list[dict[str, Any]]) -> dict[str, dict[str, An
     return index
 
 
+def _suite_results_by_model(records: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for record in records:
+        model = record.get("model") or {}
+        model_id = model.get("model_id")
+        if model_id:
+            grouped[str(model_id)].append(record)
+        display_name = model.get("display_name")
+        if display_name and display_name != model_id:
+            grouped[str(display_name)].append(record)
+    return grouped
+
+
+def _suite_model_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
+    if not records:
+        return {}
+    model = records[0].get("model") or {}
+    return {
+        "display_name": model.get("display_name"),
+        "family": model.get("family"),
+        "parameter_size_b": _float(model.get("parameter_size_b")),
+        "quantization": model.get("quantization"),
+    }
+
+
+def _suite_primary_model_labels(suite_index: dict[str, list[dict[str, Any]]]) -> set[str]:
+    labels = set()
+    for records in suite_index.values():
+        for record in records:
+            model_id = (record.get("model") or {}).get("model_id")
+            if model_id:
+                labels.add(str(model_id))
+    return labels
+
+
+def _benchmark_suite_summaries(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [_benchmark_suite_summary(record) for record in records]
+
+
+def _benchmark_suite_summary(record: dict[str, Any]) -> dict[str, Any]:
+    model = record.get("model") or {}
+    runtime = record.get("runtime_lane") or {}
+    condition = record.get("machine_condition") or {}
+    summary = record.get("summary") or {}
+    return {
+        "suite_run_id": str(record.get("suite_run_id", "unknown-suite")),
+        "model_id": str(model.get("model_id") or model.get("display_name") or "unknown-model"),
+        "display_name": str(model.get("display_name") or model.get("model_id") or "unknown model"),
+        "suite_id": str((record.get("suite") or {}).get("suite_id") or "unknown"),
+        "status": str(record.get("status", "pending")),
+        "backend": str(runtime.get("backend", "unknown")),
+        "accelerator_ids": [str(item) for item in runtime.get("accelerator_ids", [])],
+        "condition_id": str(condition.get("condition_id", "unknown")),
+        "total": _int(summary.get("total")),
+        "passed": _int(summary.get("passed")),
+        "failed": _int(summary.get("failed")),
+        "unsupported": _int(summary.get("unsupported")),
+        "pending": _int(summary.get("pending")),
+        "errored": _int(summary.get("errored")),
+        "task_statuses": [
+            {
+                "task_id": str(task.get("task_id", "unknown")),
+                "benchmark": str(task.get("benchmark", "unknown")),
+                "category": str(task.get("category", "unknown")),
+                "status": str(task.get("status", "unknown")),
+                "metric_summary": _metric_summary(task.get("metrics") or {}),
+                "local_metric_summary": _metric_summary(task.get("local_metrics") or {}),
+                "notes": str(task.get("notes", "")),
+            }
+            for task in record.get("task_results", [])
+        ],
+    }
+
+
 def _merge_observed_candidates(
     candidates: list[dict[str, Any]],
     observations: dict[str, list[dict[str, Any]]],
+    suite_index: dict[str, list[dict[str, Any]]],
 ) -> list[dict[str, Any]]:
     seen = {_candidate_observed_label(candidate) for candidate in candidates}
     merged = list(candidates)
-    for model_label in observations:
+    for model_label in sorted(set(observations) | _suite_primary_model_labels(suite_index)):
         if model_label in seen:
             continue
         observed_role = _role_from_observation(observations[model_label])
         if observed_role == "unknown":
             observed_role = "general_chat"
+        suite_model = _suite_model_summary(suite_index.get(model_label, []))
         merged.append(
             {
                 "model_id": model_label,
-                "display_name": model_label,
-                "family": _guess_family(model_label),
-                "parameter_size_b": _guess_parameter_size(model_label),
-                "quantization": _guess_quantization(model_label),
+                "display_name": suite_model.get("display_name") or model_label,
+                "family": suite_model.get("family") or _guess_family(model_label),
+                "parameter_size_b": suite_model.get("parameter_size_b") or _guess_parameter_size(model_label),
+                "quantization": suite_model.get("quantization") or _guess_quantization(model_label),
                 "file_size_mb": 0,
                 "local_status": "local",
                 "preferred_roles": [observed_role],
@@ -276,6 +360,7 @@ def _merge_observed_candidates(
 def _score_candidate(
     candidate: dict[str, Any],
     observations: list[dict[str, Any]],
+    suite_results: list[dict[str, Any]],
     capability_records: list[dict[str, Any]],
     context_model: dict[str, Any] | None,
     lane_index: dict[str, dict[str, Any]],
@@ -283,20 +368,20 @@ def _score_candidate(
 ) -> dict[str, Any]:
     role = _recommended_role(candidate, observations)
     best_observation = _best_observation(observations)
-    best_lane = _best_lane(candidate, best_observation, lane_index, machine_profile, role)
+    best_lane = _best_lane(candidate, best_observation, suite_results, lane_index, machine_profile, role)
     breakdown = {
         "capacity_fit": _capacity_score(candidate, observations, best_lane, machine_profile),
         "speed_latency": _speed_score(best_observation, role, candidate),
-        "stability": _stability_score(observations),
+        "stability": _stability_score(observations, suite_results),
         "role_fit": _role_score(candidate, role, best_observation),
-        "quality_size": _quality_score(candidate, role),
-        "operational_readiness": _readiness_score(candidate, observations, best_lane),
-        "evidence_confidence": _confidence_score(observations),
+        "quality_size": _quality_score(candidate, role, suite_results),
+        "operational_readiness": _readiness_score(candidate, observations, suite_results, best_lane),
+        "evidence_confidence": _confidence_score(observations, suite_results),
         "agent_capability": _agent_capability_score(capability_records),
         "context_evidence": _context_evidence_score(context_model),
     }
     fit_score = sum(breakdown.values())
-    blockers = _blockers(candidate, observations, best_lane, fit_score)
+    blockers = _blockers(candidate, observations, suite_results, best_lane, fit_score)
     return {
         "rank": 0,
         "model_id": candidate["model_id"],
@@ -310,11 +395,11 @@ def _score_candidate(
         "fit_score": fit_score,
         "score_band": _score_band(fit_score),
         "score_breakdown": breakdown,
-        "confidence": "observed" if observations or capability_records else "inferred",
-        "reasons": _reasons(candidate, role, best_lane, breakdown, observations, capability_records, context_model),
+        "confidence": "observed" if observations or suite_results or capability_records else "inferred",
+        "reasons": _reasons(candidate, role, best_lane, breakdown, observations, suite_results, capability_records, context_model),
         "blockers": blockers,
-        "evidence": _evidence_summary(observations, capability_records, context_model),
-        "next_benchmark": _next_benchmark(candidate, role, observations, best_lane, capability_records, context_model),
+        "evidence": _evidence_summary(observations, suite_results, capability_records, context_model),
+        "next_benchmark": _next_benchmark(candidate, role, observations, suite_results, best_lane, capability_records, context_model),
     }
 
 
@@ -356,6 +441,7 @@ def _best_observation(observations: list[dict[str, Any]]) -> dict[str, Any] | No
 def _best_lane(
     candidate: dict[str, Any],
     best_observation: dict[str, Any] | None,
+    suite_results: list[dict[str, Any]],
     lane_index: dict[str, dict[str, Any]],
     machine_profile: dict[str, Any],
     role: str,
@@ -366,6 +452,16 @@ def _best_lane(
             "lane_id": best_observation["lane_id"],
             "backend": lane.get("backend", "unknown"),
             "accelerator_ids": lane.get("accelerator_ids", []),
+            "role": role,
+            "model_label": candidate.get("observed_model_label", candidate["model_id"]),
+        }
+    if suite_results:
+        suite = suite_results[-1]
+        runtime = suite.get("runtime_lane") or {}
+        return {
+            "lane_id": _benchmark_lane_id(runtime.get("backend", "unknown"), runtime.get("accelerator_ids") or []),
+            "backend": runtime.get("backend", "unknown"),
+            "accelerator_ids": runtime.get("accelerator_ids", []),
             "role": role,
             "model_label": candidate.get("observed_model_label", candidate["model_id"]),
         }
@@ -444,8 +540,16 @@ def _speed_score(best_observation: dict[str, Any] | None, role: str, candidate: 
     return 3
 
 
-def _stability_score(observations: list[dict[str, Any]]) -> int:
-    if not observations:
+def _stability_score(observations: list[dict[str, Any]], suite_results: list[dict[str, Any]]) -> int:
+    if not observations and not suite_results:
+        return 5
+    if suite_results and not observations:
+        failed = sum(_suite_count(result, "failed") + _suite_count(result, "errored") for result in suite_results)
+        passed = sum(_suite_count(result, "passed") for result in suite_results)
+        if failed:
+            return 4
+        if passed:
+            return 8
         return 5
     successes = sum(1 for observation in observations if observation.get("outcome") == "success")
     if successes == len(observations):
@@ -463,7 +567,12 @@ def _role_score(candidate: dict[str, Any], role: str, best_observation: dict[str
     return 5
 
 
-def _quality_score(candidate: dict[str, Any], role: str) -> int:
+def _quality_score(candidate: dict[str, Any], role: str, suite_results: list[dict[str, Any]]) -> int:
+    suite_passed = sum(_suite_count(result, "passed") for result in suite_results)
+    if suite_passed >= 3:
+        return 5
+    if suite_passed:
+        return 4
     prior = candidate.get("quality_prior", "unknown")
     if prior == "high":
         return 5
@@ -482,8 +591,11 @@ def _quality_score(candidate: dict[str, Any], role: str) -> int:
 def _readiness_score(
     candidate: dict[str, Any],
     observations: list[dict[str, Any]],
+    suite_results: list[dict[str, Any]],
     best_lane: dict[str, Any],
 ) -> int:
+    if suite_results and any(_suite_count(result, "passed") > 0 for result in suite_results):
+        return 10
     if observations:
         if any(observation.get("outcome") == "success" for observation in observations):
             return 10
@@ -495,13 +607,16 @@ def _readiness_score(
     return 2
 
 
-def _confidence_score(observations: list[dict[str, Any]]) -> int:
+def _confidence_score(observations: list[dict[str, Any]], suite_results: list[dict[str, Any]]) -> int:
     successes = sum(1 for observation in observations if observation.get("outcome") == "success")
+    suite_successes = sum(_suite_count(result, "passed") for result in suite_results)
+    if suite_successes >= 3:
+        return 5
     if successes >= 3:
         return 5
-    if successes:
+    if successes or suite_successes:
         return 4
-    if observations:
+    if observations or suite_results:
         return 1
     return 2
 
@@ -525,14 +640,22 @@ def _context_evidence_score(context_model: dict[str, Any] | None) -> int:
 def _blockers(
     candidate: dict[str, Any],
     observations: list[dict[str, Any]],
+    suite_results: list[dict[str, Any]],
     best_lane: dict[str, Any],
     fit_score: int,
 ) -> list[str]:
     blockers: list[str] = []
-    if not observations:
+    if not observations and not suite_results:
         blockers.append("no_observed_benchmark")
     elif not any(observation.get("outcome") == "success" for observation in observations):
-        blockers.append("observed_failure")
+        if any((_suite_count(result, "passed") > 0) for result in suite_results):
+            pass
+        else:
+            blockers.append("observed_failure")
+    if any(result.get("status") == "partial" for result in suite_results):
+        blockers.append("official_suite_partial")
+    if any(result.get("status") in {"fail", "blocked"} for result in suite_results):
+        blockers.append("official_suite_blocked")
     if candidate.get("local_status") in {"candidate", "missing"}:
         blockers.append(f"model_status_{candidate.get('local_status')}")
     if best_lane["lane_id"] == "benchmark-required":
@@ -550,6 +673,7 @@ def _reasons(
     best_lane: dict[str, Any],
     breakdown: dict[str, int],
     observations: list[dict[str, Any]],
+    suite_results: list[dict[str, Any]],
     capability_records: list[dict[str, Any]],
     context_model: dict[str, Any] | None,
 ) -> list[str]:
@@ -559,6 +683,10 @@ def _reasons(
     ]
     if observations:
         reasons.append(f"{len(observations)} observed run(s) are available for this model label.")
+    elif suite_results:
+        passed = sum(_suite_count(result, "passed") for result in suite_results)
+        unsupported = sum(_suite_count(result, "unsupported") for result in suite_results)
+        reasons.append(f"Official benchmark-suite evidence is attached: {passed} passed task(s), {unsupported} unsupported task(s).")
     else:
         reasons.append("Score is inferred until this model has a direct benchmark.")
     if breakdown["capacity_fit"] >= 16:
@@ -597,13 +725,21 @@ def _context_reason(context_model: dict[str, Any]) -> str:
 
 def _evidence_summary(
     observations: list[dict[str, Any]],
+    suite_results: list[dict[str, Any]],
     capability_records: list[dict[str, Any]],
     context_model: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    if not observations and not capability_records:
+    suite_counts = _suite_counts(suite_results)
+    suite_unsupported_tasks = _suite_tasks_with_status(suite_results, "unsupported")
+    if not observations and not suite_results and not capability_records:
         payload = {
             "source": "inferred_from_inventory",
             "observation_count": 0,
+            "benchmark_suite_result_count": 0,
+            "benchmark_suite_passed": 0,
+            "benchmark_suite_failed": 0,
+            "benchmark_suite_unsupported": 0,
+            "benchmark_suite_unsupported_tasks": [],
             "capability_record_count": 0,
             "thinking_modes": [],
         }
@@ -612,11 +748,18 @@ def _evidence_summary(
     latencies = [observation["latency_ms"] for observation in observations]
     tokens = [observation["total_tokens"] for observation in observations]
     sources = sorted({observation.get("source", "unknown") for observation in observations})
+    if suite_results:
+        sources.append("benchmark_suite_result")
     if capability_records:
         sources.append("local_capability_record")
     payload = {
         "source": "+".join(sources),
         "observation_count": len(observations),
+        "benchmark_suite_result_count": len(suite_results),
+        "benchmark_suite_passed": suite_counts["passed"],
+        "benchmark_suite_failed": suite_counts["failed"] + suite_counts["errored"],
+        "benchmark_suite_unsupported": suite_counts["unsupported"],
+        "benchmark_suite_unsupported_tasks": suite_unsupported_tasks,
         "capability_record_count": len(capability_records),
         "thinking_modes": sorted(
             {
@@ -639,11 +782,14 @@ def _next_benchmark(
     candidate: dict[str, Any],
     role: str,
     observations: list[dict[str, Any]],
+    suite_results: list[dict[str, Any]],
     best_lane: dict[str, Any],
     capability_records: list[dict[str, Any]],
     context_model: dict[str, Any] | None,
 ) -> str:
-    if not observations:
+    if suite_results and sum(_suite_count(result, "unsupported") for result in suite_results):
+        return "Install or wire unsupported official benchmark runners, then rerun the benchmark suite."
+    if not observations and not suite_results:
         return f"Run a direct {role.replace('_', ' ')} benchmark on {best_lane['lane_id']}."
     if not capability_records:
         return "Run applens-local-v1 capability eval for JSON, tool, coding, hardware, safety, and handoff behavior."
@@ -658,6 +804,8 @@ def _next_benchmark(
 
 def _next_actions(rankings: list[dict[str, Any]]) -> list[str]:
     actions = ["Benchmark the top unobserved candidate before making it the default."]
+    if any(row["evidence"].get("benchmark_suite_unsupported", 0) for row in rankings):
+        actions.append("Wire unsupported official benchmark runners before treating suite scores as complete.")
     if any(not row["evidence"].get("capability_record_count") for row in rankings):
         actions.append("Run applens-local-v1 on top candidates before using them for agentic local work.")
     if any("requires_amd_vgm_vulkan_path" in row["blockers"] for row in rankings):
@@ -734,6 +882,37 @@ def _guess_quantization(model_label: str) -> str:
 def _capability_score_pct(record: dict[str, Any]) -> float:
     score = ((record.get("scores") or {}).get("score_pct"))
     return _float(score)
+
+
+def _suite_count(record: dict[str, Any], key: str) -> int:
+    return _int((record.get("summary") or {}).get(key))
+
+
+def _suite_counts(records: list[dict[str, Any]]) -> dict[str, int]:
+    keys = ["total", "passed", "failed", "unsupported", "pending", "errored"]
+    return {key: sum(_suite_count(record, key) for record in records) for key in keys}
+
+
+def _suite_tasks_with_status(records: list[dict[str, Any]], status: str) -> list[str]:
+    task_ids = {
+        str(task.get("task_id"))
+        for record in records
+        for task in record.get("task_results", [])
+        if task.get("status") == status and task.get("task_id")
+    }
+    return sorted(task_ids)
+
+
+def _metric_summary(metrics: dict[str, Any]) -> str:
+    if not metrics:
+        return ""
+    parts = []
+    for key in sorted(metrics)[:3]:
+        value = metrics[key]
+        if isinstance(value, float):
+            value = round(value, 4)
+        parts.append(f"{key}={value}")
+    return "; ".join(parts)
 
 
 def _capability_categories(records: list[dict[str, Any]]) -> dict[str, float]:

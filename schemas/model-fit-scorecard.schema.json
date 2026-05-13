@@ -10,10 +10,11 @@
     "created_at",
     "machine",
     "scoring_weights",
-    "rankings",
-    "evidence",
-    "next_actions",
-    "privacy"
+        "rankings",
+        "benchmark_suites",
+        "evidence",
+        "next_actions",
+        "privacy"
   ],
   "properties": {
     "schema_version": { "type": "string", "const": "0.1" },
@@ -73,13 +74,18 @@
     "evidence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["experiment_summary_count", "benchmark_record_count", "capability_record_count", "candidate_model_count"],
+      "required": ["experiment_summary_count", "benchmark_record_count", "benchmark_suite_result_count", "capability_record_count", "candidate_model_count"],
       "properties": {
         "experiment_summary_count": { "type": "integer", "minimum": 0 },
         "benchmark_record_count": { "type": "integer", "minimum": 0 },
+        "benchmark_suite_result_count": { "type": "integer", "minimum": 0 },
         "capability_record_count": { "type": "integer", "minimum": 0 },
         "candidate_model_count": { "type": "integer", "minimum": 0 }
       }
+    },
+    "benchmark_suites": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/benchmark_suite_summary" }
     },
     "next_actions": {
       "type": "array",
@@ -183,6 +189,11 @@
           "required": [
             "source",
             "observation_count",
+            "benchmark_suite_result_count",
+            "benchmark_suite_passed",
+            "benchmark_suite_failed",
+            "benchmark_suite_unsupported",
+            "benchmark_suite_unsupported_tasks",
             "capability_record_count",
             "thinking_modes",
             "advertised_context_tokens",
@@ -195,6 +206,15 @@
           "properties": {
             "source": { "type": "string", "minLength": 1 },
             "observation_count": { "type": "integer", "minimum": 0 },
+            "benchmark_suite_result_count": { "type": "integer", "minimum": 0 },
+            "benchmark_suite_passed": { "type": "integer", "minimum": 0 },
+            "benchmark_suite_failed": { "type": "integer", "minimum": 0 },
+            "benchmark_suite_unsupported": { "type": "integer", "minimum": 0 },
+            "benchmark_suite_unsupported_tasks": {
+              "type": "array",
+              "items": { "type": "string" },
+              "uniqueItems": true
+            },
             "capability_record_count": { "type": "integer", "minimum": 0 },
             "advertised_context_tokens": { "type": "integer", "minimum": 0 },
             "max_tested_context_tokens": { "type": "integer", "minimum": 0 },
@@ -242,6 +262,63 @@
         },
         "role": { "type": "string" },
         "model_label": { "type": "string" }
+      }
+    },
+    "benchmark_suite_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "suite_run_id",
+        "model_id",
+        "display_name",
+        "suite_id",
+        "status",
+        "backend",
+        "accelerator_ids",
+        "condition_id",
+        "total",
+        "passed",
+        "failed",
+        "unsupported",
+        "pending",
+        "errored",
+        "task_statuses"
+      ],
+      "properties": {
+        "suite_run_id": { "type": "string", "minLength": 1 },
+        "model_id": { "type": "string", "minLength": 1 },
+        "display_name": { "type": "string", "minLength": 1 },
+        "suite_id": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["pass", "partial", "blocked", "fail", "pending"] },
+        "backend": { "type": "string" },
+        "accelerator_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "condition_id": { "type": "string" },
+        "total": { "type": "integer", "minimum": 0 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "unsupported": { "type": "integer", "minimum": 0 },
+        "pending": { "type": "integer", "minimum": 0 },
+        "errored": { "type": "integer", "minimum": 0 },
+        "task_statuses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["task_id", "benchmark", "category", "status", "metric_summary", "local_metric_summary", "notes"],
+            "properties": {
+              "task_id": { "type": "string" },
+              "benchmark": { "type": "string" },
+              "category": { "type": "string" },
+              "status": { "type": "string" },
+              "metric_summary": { "type": "string" },
+              "local_metric_summary": { "type": "string" },
+              "notes": { "type": "string" }
+            }
+          }
+        }
       }
     },
     "score_breakdown": {

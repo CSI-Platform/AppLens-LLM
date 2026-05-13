@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://csi-platform.local/applens-llm/benchmark-readiness.schema.json",
+  "title": "AppLens-LLM Benchmark Readiness",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "created_at",
+    "suite_run_id",
+    "status",
+    "lm_eval",
+    "endpoint_capabilities",
+    "runner_readiness",
+    "task_readiness",
+    "next_actions",
+    "privacy"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "suite_run_id": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "enum": ["ready", "partial", "blocked"] },
+    "lm_eval": { "$ref": "#/$defs/tool_status" },
+    "endpoint_capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["endpoint", "available", "chat_completions", "completions", "remote_tokenizer", "legacy_loglikelihood", "notes"],
+      "properties": {
+        "endpoint": { "type": "string" },
+        "available": { "type": "boolean" },
+        "chat_completions": { "type": "boolean" },
+        "completions": { "type": "boolean" },
+        "remote_tokenizer": { "type": "boolean" },
+        "legacy_loglikelihood": { "type": "boolean" },
+        "notes": { "type": "string" }
+      }
+    },
+    "runner_readiness": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/runner_status" }
+    },
+    "task_readiness": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/task_status" }
+    },
+    "next_actions": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit_safe", "local_paths_included"],
+      "properties": {
+        "commit_safe": { "type": "boolean" },
+        "local_paths_included": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "tool_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "status", "path", "notes"],
+      "properties": {
+        "name": { "type": "string" },
+        "status": { "type": "string", "enum": ["ready", "partial", "missing", "blocked"] },
+        "path": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
+    "runner_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runner", "status", "task_ids", "notes"],
+      "properties": {
+        "runner": { "type": "string" },
+        "status": { "type": "string", "enum": ["ready", "partial", "missing", "blocked"] },
+        "task_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "notes": { "type": "string" }
+      }
+    },
+    "task_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_id", "benchmark", "runner", "required_lm_call", "status", "reason"],
+      "properties": {
+        "task_id": { "type": "string" },
+        "benchmark": { "type": "string" },
+        "runner": { "type": "string" },
+        "required_lm_call": { "type": "string" },
+        "status": { "type": "string", "enum": ["ready", "missing", "blocked"] },
+        "reason": { "type": "string" }
+      }
+    }
+  }
+}

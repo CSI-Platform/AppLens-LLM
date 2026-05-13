@@ -288,6 +288,10 @@ def build_suite_result(
         "status": status,
         "plan_path": str(plan_path),
         "artifact_root": str(artifact_root),
+        "model": suite["model"],
+        "suite": _suite_summary(suite.get("suite") or {}),
+        "machine_condition": _condition_summary(suite.get("machine_condition") or {}),
+        "runtime_lane": _runtime_summary(suite.get("runtime_lane") or {}),
         "runner_context": runner_context
         or {
             "lm_eval_binary": "lm_eval",
@@ -460,6 +464,33 @@ def _local_metrics(elapsed_seconds: float, effective_samples: int | None) -> dic
     if effective_samples and elapsed_seconds > 0:
         metrics["effective_samples_per_second"] = round(effective_samples / elapsed_seconds, 6)
     return metrics
+
+
+def _suite_summary(suite: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "suite_id": str(suite.get("suite_id", "unknown")),
+        "model_size_class": str(suite.get("model_size_class", "unknown")),
+        "scoring_mode": str(suite.get("scoring_mode", "unknown")),
+    }
+
+
+def _condition_summary(condition: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "condition_id": str(condition.get("condition_id", "unknown")),
+        "label": str(condition.get("label", "unknown")),
+        "accelerator_ids": [str(item) for item in condition.get("accelerator_ids", [])],
+    }
+
+
+def _runtime_summary(runtime: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "engine": str(runtime.get("engine", "unknown")),
+        "backend": str(runtime.get("backend", "unknown")),
+        "device_selector": str(runtime.get("device_selector", "unknown")),
+        "accelerator_ids": [str(item) for item in runtime.get("accelerator_ids", [])],
+        "endpoint": str(runtime.get("endpoint", "unknown")),
+        "context_tokens": int(runtime.get("context_tokens") or 0),
+    }
 
 
 def _join_endpoint(endpoint_base: str, suffix: str) -> str:

@@ -2,10 +2,12 @@
   "created_at": "2026-05-10T00:00:00Z",
   "evidence": {
     "benchmark_record_count": 0,
+    "benchmark_suite_result_count": 0,
     "capability_record_count": 0,
     "candidate_model_count": 3,
     "experiment_summary_count": 5
   },
+  "benchmark_suites": [],
   "machine": {
     "label": "ASUS ProArt PX13",
     "machine_id": "asus-laptop",
@@ -43,6 +45,11 @@
       "evidence": {
         "avg_latency_ms": 2166.0,
         "avg_total_tokens": 133.0,
+        "benchmark_suite_failed": 0,
+        "benchmark_suite_passed": 0,
+        "benchmark_suite_result_count": 0,
+        "benchmark_suite_unsupported": 0,
+        "benchmark_suite_unsupported_tasks": [],
         "capability_record_count": 0,
         "advertised_context_tokens": 0,
         "context_score_pct": 0,
@@ -102,6 +109,11 @@
       "evidence": {
         "avg_latency_ms": 21566.6,
         "avg_total_tokens": 273.0,
+        "benchmark_suite_failed": 0,
+        "benchmark_suite_passed": 0,
+        "benchmark_suite_result_count": 0,
+        "benchmark_suite_unsupported": 0,
+        "benchmark_suite_unsupported_tasks": [],
         "capability_record_count": 0,
         "advertised_context_tokens": 0,
         "context_score_pct": 0,
@@ -161,6 +173,11 @@
       "display_name": "Gemma E4B Q4",
       "evidence": {
         "advertised_context_tokens": 0,
+        "benchmark_suite_failed": 0,
+        "benchmark_suite_passed": 0,
+        "benchmark_suite_result_count": 0,
+        "benchmark_suite_unsupported": 0,
+        "benchmark_suite_unsupported_tasks": [],
         "capability_record_count": 0,
         "context_score_pct": 0,
         "context_evidence_status": "advertised_unproven",

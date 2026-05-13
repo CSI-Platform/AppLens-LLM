@@ -28,6 +28,7 @@ def build_scorecard_html(
             '<main class="page">',
             _header(scorecard, page_title),
             _summary(scorecard),
+            _benchmark_suite_table(scorecard),
             _ranking_table(scorecard),
             _comparison_table(comparisons),
             _script(),
@@ -85,7 +86,7 @@ def _summary(scorecard: dict[str, Any]) -> str:
   {_metric("Top model", top["display_name"], f"{top['fit_score']}/100")}
   {_metric("Observed models", observed, "benchmark-backed")}
   {_metric("Capability records", evidence.get("capability_record_count", 0), "applens-local-v1")}
-  {_metric("Evidence", evidence["benchmark_record_count"], f"{evidence['experiment_summary_count']} experiment summaries")}
+  {_metric("Suite results", evidence.get("benchmark_suite_result_count", 0), f"{evidence['benchmark_record_count']} legacy benchmark records")}
 </section>
 """.strip()
 
@@ -148,6 +149,80 @@ def _ranking_table(scorecard: dict[str, Any]) -> str:
       </thead>
       <tbody>
         {''.join(rows)}
+      </tbody>
+    </table>
+  </div>
+</section>
+""".strip()
+
+
+def _benchmark_suite_table(scorecard: dict[str, Any]) -> str:
+    suites = scorecard.get("benchmark_suites") or []
+    if not suites:
+        return """
+<section class="section">
+  <h2>Benchmark Suite Coverage</h2>
+  <p class="subtle">No benchmark-suite-result files were attached.</p>
+</section>
+""".strip()
+    rows = []
+    task_rows = []
+    for suite in suites:
+        rows.append(
+            "<tr>"
+            f"<td>{_text(suite['suite_run_id'])}<small>{_text(suite['model_id'])}</small></td>"
+            f"<td>{_text(suite['suite_id'])}</td>"
+            f"<td>{_text(suite['status'])}</td>"
+            f"<td>{_text(suite['backend'])}<small>{_text(_join(suite.get('accelerator_ids', [])))}</small></td>"
+            f"<td>{_text(suite['passed'])}/{_text(suite['total'])}<small>unsupported {_text(suite['unsupported'])}, failed {_text(suite['failed'] + suite['errored'])}</small></td>"
+            f"<td>{_text(suite['condition_id'])}</td>"
+            "</tr>"
+        )
+        for task in suite.get("task_statuses", []):
+            task_rows.append(
+                "<tr>"
+                f"<td>{_text(suite['model_id'])}</td>"
+                f"<td>{_text(task['benchmark'])}<small>{_text(task['task_id'])}</small></td>"
+                f"<td>{_text(task['category'])}</td>"
+                f"<td>{_text(task['status'])}</td>"
+                f"<td>{_text(task['metric_summary'])}<small>{_text(task['local_metric_summary'])}</small></td>"
+                f"<td>{_text(task['notes'])}</td>"
+                "</tr>"
+            )
+    return f"""
+<section class="section">
+  <h2>Benchmark Suite Coverage</h2>
+  <div class="table-wrap">
+    <table data-sort-table>
+      <thead>
+        <tr>
+          <th onclick="sortTable(this)">Suite</th>
+          <th onclick="sortTable(this)">Suite ID</th>
+          <th onclick="sortTable(this)">Status</th>
+          <th onclick="sortTable(this)">Lane</th>
+          <th onclick="sortTable(this)">Coverage</th>
+          <th onclick="sortTable(this)">Condition</th>
+        </tr>
+      </thead>
+      <tbody>
+        {''.join(rows)}
+      </tbody>
+    </table>
+  </div>
+  <div class="table-wrap task-table">
+    <table data-sort-table>
+      <thead>
+        <tr>
+          <th onclick="sortTable(this)">Model</th>
+          <th onclick="sortTable(this)">Benchmark</th>
+          <th onclick="sortTable(this)">Category</th>
+          <th onclick="sortTable(this)">Status</th>
+          <th onclick="sortTable(this)">Metrics</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {''.join(task_rows)}
       </tbody>
     </table>
   </div>
@@ -296,6 +371,7 @@ input[type="search"] {
   border-radius: 8px;
   background: var(--panel);
 }
+.task-table { margin-top: 10px; }
 table {
   width: 100%;
   border-collapse: collapse;

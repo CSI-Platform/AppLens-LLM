@@ -18,6 +18,10 @@ def test_build_scorecard_html_contains_sortable_rankings_and_comparisons() -> No
     assert "Jan v3.5 4B Q4" in html
     assert "Qwen3.5 27B IQ3" in html
     assert "Recommended context" in html
+    assert "Benchmark Suite Coverage" in html
+    assert "IFEval" in html
+    assert "HellaSwag" in html
+    assert "unsupported" in html
     assert "65,536" in html
     assert "unproven" in html
     assert "quality needed" in html
@@ -109,6 +113,11 @@ def _scorecard() -> dict:
                 "evidence": {
                     "source": "experiment_summary",
                     "observation_count": 5,
+                    "benchmark_suite_result_count": 1,
+                    "benchmark_suite_passed": 3,
+                    "benchmark_suite_failed": 0,
+                    "benchmark_suite_unsupported": 1,
+                    "benchmark_suite_unsupported_tasks": ["hellaswag"],
                     "capability_record_count": 1,
                     "advertised_context_tokens": 262144,
                     "max_tested_context_tokens": 65536,
@@ -159,6 +168,11 @@ def _scorecard() -> dict:
                 "evidence": {
                     "source": "experiment_summary",
                     "observation_count": 5,
+                    "benchmark_suite_result_count": 0,
+                    "benchmark_suite_passed": 0,
+                    "benchmark_suite_failed": 0,
+                    "benchmark_suite_unsupported": 0,
+                    "benchmark_suite_unsupported_tasks": [],
                     "capability_record_count": 1,
                     "advertised_context_tokens": 0,
                     "max_tested_context_tokens": 0,
@@ -209,6 +223,11 @@ def _scorecard() -> dict:
                 "evidence": {
                     "source": "benchmark_record",
                     "observation_count": 1,
+                    "benchmark_suite_result_count": 0,
+                    "benchmark_suite_passed": 0,
+                    "benchmark_suite_failed": 0,
+                    "benchmark_suite_unsupported": 0,
+                    "benchmark_suite_unsupported_tasks": [],
                     "capability_record_count": 0,
                     "advertised_context_tokens": 262144,
                     "max_tested_context_tokens": 16384,
@@ -226,9 +245,48 @@ def _scorecard() -> dict:
         "evidence": {
             "experiment_summary_count": 5,
             "benchmark_record_count": 0,
+            "benchmark_suite_result_count": 1,
             "capability_record_count": 2,
             "candidate_model_count": 2,
         },
+        "benchmark_suites": [
+            {
+                "suite_run_id": "suite-qwen4b-vgm16",
+                "model_id": "jan-v35-4b-q4",
+                "display_name": "Jan v3.5 4B Q4",
+                "suite_id": "tiny-v1",
+                "status": "partial",
+                "backend": "vulkan",
+                "accelerator_ids": ["amd-igpu-0"],
+                "condition_id": "asus-px13-vgm16-ram16",
+                "total": 4,
+                "passed": 3,
+                "failed": 0,
+                "unsupported": 1,
+                "pending": 0,
+                "errored": 0,
+                "task_statuses": [
+                    {
+                        "task_id": "ifeval",
+                        "benchmark": "IFEval",
+                        "category": "instruction_following",
+                        "status": "pass",
+                        "metric_summary": "prompt_level_strict_acc,none=1",
+                        "local_metric_summary": "wall_time_seconds=325.2",
+                        "notes": "",
+                    },
+                    {
+                        "task_id": "hellaswag",
+                        "benchmark": "HellaSwag",
+                        "category": "reasoning",
+                        "status": "unsupported",
+                        "metric_summary": "",
+                        "local_metric_summary": "",
+                        "notes": "loglikelihood unsupported",
+                    },
+                ],
+            }
+        ],
         "next_actions": ["Benchmark unobserved candidates."],
         "privacy": {"commit_safe": True, "local_paths_included": False},
     }

@@ -11,6 +11,10 @@
     "status",
     "plan_path",
     "artifact_root",
+    "model",
+    "suite",
+    "machine_condition",
+    "runtime_lane",
     "runner_context",
     "task_results",
     "summary"
@@ -25,6 +29,54 @@
     },
     "plan_path": { "type": "string", "minLength": 1 },
     "artifact_root": { "type": "string", "minLength": 1 },
+    "model": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["model_id", "display_name"],
+      "properties": {
+        "model_id": { "type": "string", "minLength": 1 },
+        "display_name": { "type": "string", "minLength": 1 }
+      }
+    },
+    "suite": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["suite_id"],
+      "properties": {
+        "suite_id": { "type": "string", "minLength": 1 },
+        "model_size_class": { "type": "string" },
+        "scoring_mode": { "type": "string" }
+      }
+    },
+    "machine_condition": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["condition_id"],
+      "properties": {
+        "condition_id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string" },
+        "accelerator_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "runtime_lane": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["backend", "accelerator_ids"],
+      "properties": {
+        "engine": { "type": "string" },
+        "backend": { "type": "string" },
+        "device_selector": { "type": "string" },
+        "accelerator_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "endpoint": { "type": "string" },
+        "context_tokens": { "type": "integer", "minimum": 0 }
+      }
+    },
     "runner_context": {
       "type": "object",
       "additionalProperties": false,

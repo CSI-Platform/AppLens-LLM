@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from applens_llm.benchmark_suite import build_benchmark_suite_run
 from applens_llm.schemas import validate_payload
 
 
@@ -213,6 +214,29 @@ def test_cli_writes_benchmark_suite_plan(tmp_path: Path) -> None:
     validate_payload("benchmark-suite-run", payload)
     assert payload["suite"]["suite_id"] == "tiny-v1"
     assert payload["machine_condition"]["vgm_state"]["dedicated_mb"] == 16384
+
+
+def test_cli_writes_benchmark_readiness_report(tmp_path: Path) -> None:
+    plan = tmp_path / "benchmark-suite.json"
+    output = tmp_path / "readiness.json"
+    plan.write_text(json.dumps(_benchmark_suite_payload()), encoding="utf-8")
+
+    result = run_cli(
+        "benchmark-readiness",
+        "--plan",
+        str(plan),
+        "--output",
+        str(output),
+        "--lm-eval",
+        sys.executable,
+        "--skip-endpoint",
+    )
+
+    assert result.returncode == 0
+    assert "benchmark readiness" in result.stdout
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    validate_payload("benchmark-readiness", payload)
+    assert payload["suite_run_id"] == "qwen35-4b-vgm16-plan"
 
 
 def test_cli_rejects_invalid_runtime_lanes(tmp_path: Path) -> None:
@@ -808,6 +832,56 @@ def _runtime_lanes_payload() -> dict[str, object]:
     }
 
 
+def _benchmark_suite_payload() -> dict[str, object]:
+    return build_benchmark_suite_run(
+        suite_run_id="qwen35-4b-vgm16-plan",
+        model={
+            "model_id": "qwen35-4b-q4km",
+            "display_name": "Qwen3.5 4B Q4_K_M",
+            "family": "qwen",
+            "parameter_size_b": 4,
+            "quantization": "Q4_K_M",
+            "model_format": "gguf",
+            "path": "sanitized/models/model.gguf",
+            "sha256": "unknown",
+            "chat_template": "qwen",
+            "thinking_mode": "off",
+            "reasoning_mode": "off",
+        },
+        machine_condition={
+            "condition_id": "asus-px13-vgm16-ram16",
+            "label": "ASUS PX13 VGM 16GB",
+            "os_family": "windows",
+            "ram_gb": 32,
+            "vgm_state": {
+                "enabled": True,
+                "dedicated_mb": 16384,
+                "system_ram_available_gb": 16,
+                "source": "AMD Software: Adrenalin Edition",
+            },
+            "accelerator_ids": ["amd-igpu-0"],
+            "required_preflight": [],
+            "evidence_paths": [],
+        },
+        runtime_lane={
+            "engine": "llama.cpp",
+            "backend": "vulkan",
+            "device_selector": "Vulkan0",
+            "accelerator_ids": ["amd-igpu-0"],
+            "endpoint": "http://127.0.0.1:18080/v1",
+            "context_tokens": 16384,
+            "batch_size": 2048,
+            "ubatch_size": 512,
+            "threads": 12,
+            "gpu_layers": 99,
+            "kv_cache_type": "auto",
+            "flash_attention": "auto",
+            "extra_flags": [],
+        },
+        created_at="2026-05-13T20:00:00Z",
+    )
+
+
 def _experiment_summary(branch: str, *, fast_ms: int) -> dict[str, object]:
     return {
         "schema_version": "0.1",
@@ -1004,6 +1078,11 @@ def _scorecard_payload() -> dict[str, object]:
                 "evidence": {
                     "source": "experiment_summary",
                     "observation_count": 5,
+                    "benchmark_suite_result_count": 0,
+                    "benchmark_suite_passed": 0,
+                    "benchmark_suite_failed": 0,
+                    "benchmark_suite_unsupported": 0,
+                    "benchmark_suite_unsupported_tasks": [],
                     "capability_record_count": 1,
                     "advertised_context_tokens": 0,
                     "max_tested_context_tokens": 0,
@@ -1023,9 +1102,11 @@ def _scorecard_payload() -> dict[str, object]:
         "evidence": {
             "experiment_summary_count": 5,
             "benchmark_record_count": 0,
+            "benchmark_suite_result_count": 0,
             "capability_record_count": 1,
             "candidate_model_count": 1,
         },
+        "benchmark_suites": [],
         "next_actions": ["Benchmark unobserved candidates."],
         "privacy": {"commit_safe": True, "local_paths_included": False},
     }

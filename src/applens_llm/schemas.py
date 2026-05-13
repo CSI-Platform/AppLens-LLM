@@ -27,6 +27,7 @@ SCHEMA_NAMES = (
     "context-quality-record",
     "deployment-plan",
     "benchmark-record",
+    "benchmark-readiness",
     "benchmark-suite-run",
     "benchmark-suite-result",
     "training-example",

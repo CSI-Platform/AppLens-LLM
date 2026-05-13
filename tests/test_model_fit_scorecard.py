@@ -72,6 +72,67 @@ def test_build_model_fit_scorecard_uses_benchmark_records_without_experiments() 
     assert top["confidence"] == "observed"
 
 
+def test_model_fit_scorecard_ingests_benchmark_suite_results() -> None:
+    scorecard = build_model_fit_scorecard(
+        machine_profile=_machine_profile(),
+        model_candidates=[
+            {
+                "model_id": "jan-v35-4b-q4-xl",
+                "display_name": "Jan v3.5 4B Q4 XL",
+                "family": "qwen",
+                "parameter_size_b": 4,
+                "quantization": "Q4_K_XL",
+                "file_size_mb": 2993,
+                "local_status": "local",
+                "preferred_roles": ["general_chat"],
+                "quality_prior": "medium",
+                "observed_model_label": "jan-v35-4b-q4-xl",
+            }
+        ],
+        benchmark_suite_results=[_benchmark_suite_result()],
+        created_at="2026-05-13T19:00:00Z",
+        scorecard_id="scorecard-suite",
+    )
+
+    validate_payload("model-fit-scorecard", scorecard)
+    assert scorecard["evidence"]["benchmark_suite_result_count"] == 1
+    assert scorecard["benchmark_suites"][0]["suite_run_id"] == "suite-qwen4b-vgm16"
+    assert scorecard["benchmark_suites"][0]["passed"] == 3
+    assert scorecard["benchmark_suites"][0]["unsupported"] == 1
+    top = scorecard["rankings"][0]
+    assert top["model_id"] == "jan-v35-4b-q4-xl"
+    assert top["confidence"] == "observed"
+    assert top["evidence"]["benchmark_suite_result_count"] == 1
+    assert top["evidence"]["benchmark_suite_passed"] == 3
+    assert top["evidence"]["benchmark_suite_unsupported"] == 1
+    assert "hellaswag" in top["evidence"]["benchmark_suite_unsupported_tasks"]
+    assert "benchmark_suite_result" in top["evidence"]["source"]
+    assert "official_suite_partial" in top["blockers"]
+    assert "unsupported official benchmark" in top["next_benchmark"].lower()
+
+
+def test_write_model_fit_scorecard_loads_benchmark_suite_results(tmp_path: Path) -> None:
+    machines = tmp_path / "machines.jsonl"
+    suite = tmp_path / "suite-result.json"
+    output = tmp_path / "scorecard.json"
+    machines.write_text(json.dumps(_machine_profile()) + "\n", encoding="utf-8")
+    suite.write_text(json.dumps(_benchmark_suite_result()), encoding="utf-8")
+
+    scorecard = write_model_fit_scorecard(
+        machine_profile_path=machines,
+        machine_id="asus-laptop",
+        benchmark_suite_result_paths=[suite],
+        output_path=output,
+        created_at="2026-05-13T19:00:00Z",
+        scorecard_id="scorecard-suite-file",
+    )
+
+    assert output.exists()
+    validate_payload("model-fit-scorecard", scorecard)
+    assert scorecard["evidence"]["benchmark_suite_result_count"] == 1
+    assert scorecard["rankings"][0]["model_id"] == "jan-v35-4b-q4-xl"
+
+
 def test_model_fit_scorecard_uses_capability_records_to_break_throughput_ties() -> None:
     scorecard = build_model_fit_scorecard(
         machine_profile=_machine_profile(),
@@ -361,6 +422,90 @@ def _benchmark_record(model_name: str = "qwen2.5:7b", status: str = "pass") -> d
             "failure_modes": ["none"] if status == "pass" else [status],
             "notes": "Sanitized benchmark record.",
         },
+    }
+
+
+def _benchmark_suite_result() -> dict:
+    return {
+        "schema_version": "0.1",
+        "suite_run_id": "suite-qwen4b-vgm16",
+        "created_at": "2026-05-13T19:00:00Z",
+        "status": "partial",
+        "plan_path": "out/benchmark-suites/suite-qwen4b-vgm16/benchmark-suite-run.json",
+        "artifact_root": "out/benchmark-suites/suite-qwen4b-vgm16",
+        "model": {
+            "model_id": "jan-v35-4b-q4-xl",
+            "display_name": "Jan v3.5 4B Q4 XL",
+            "family": "qwen",
+            "parameter_size_b": 4,
+            "quantization": "Q4_K_XL",
+            "model_format": "gguf",
+            "path": "sanitized/models/jan-v35-4b-q4-xl.gguf",
+            "sha256": "unknown",
+            "chat_template": "qwen",
+            "thinking_mode": "off",
+            "reasoning_mode": "off",
+        },
+        "suite": {
+            "suite_id": "tiny-v1",
+            "model_size_class": "tiny",
+            "scoring_mode": "local_screening",
+        },
+        "machine_condition": {
+            "condition_id": "asus-px13-vgm16-ram16",
+            "label": "ASUS PX13 VGM 16GB / RAM 16GB",
+            "accelerator_ids": ["amd-igpu-0"],
+        },
+        "runtime_lane": {
+            "engine": "llama.cpp",
+            "backend": "vulkan",
+            "device_selector": "Vulkan0",
+            "accelerator_ids": ["amd-igpu-0"],
+            "endpoint": "http://127.0.0.1:18080/v1",
+            "context_tokens": 16384,
+        },
+        "runner_context": {
+            "lm_eval_binary": "lm_eval",
+            "endpoint_base": "http://127.0.0.1:18081/v1",
+            "proxy_used": True,
+            "local_screening_limit": 20,
+            "allow_unsupported": True,
+        },
+        "task_results": [
+            _suite_task("ifeval", "IFEval", "instruction_following", "pass", {"prompt_level_strict_acc,none": 1.0}, {"wall_time_seconds": 325.2}, 20),
+            _suite_task("arc_challenge_chat", "ARC-Challenge Chat", "reasoning", "pass", {"exact_match,remove_whitespace": 0.8}, {"wall_time_seconds": 21.8}, 20),
+            _suite_task("gsm8k", "GSM8K", "math", "pass", {"exact_match,flexible-extract": 0.95}, {"wall_time_seconds": 214.6}, 20),
+            _suite_task("hellaswag", "HellaSwag", "reasoning", "unsupported", {}, {}, None, ["unsupported_loglikelihood"]),
+        ],
+        "summary": {"total": 4, "passed": 3, "failed": 0, "unsupported": 1, "pending": 0, "errored": 0},
+    }
+
+
+def _suite_task(
+    task_id: str,
+    benchmark: str,
+    category: str,
+    status: str,
+    metrics: dict,
+    local_metrics: dict,
+    effective_samples: int | None,
+    failure_modes: list[str] | None = None,
+) -> dict:
+    return {
+        "task_id": task_id,
+        "benchmark": benchmark,
+        "category": category,
+        "runner": "lm-evaluation-harness",
+        "required_lm_call": "generate_until" if status == "pass" else "loglikelihood",
+        "status": status,
+        "failure_modes": failure_modes or ["none"],
+        "command": [],
+        "returncode": 0 if status == "pass" else None,
+        "metrics": metrics,
+        "local_metrics": local_metrics,
+        "effective_samples": effective_samples,
+        "artifacts": [],
+        "notes": "",
     }
 
 

@@ -101,6 +101,12 @@ Use the suite runner to create the result artifact. The runner can start the pro
 uv run applens-llm benchmark-suite-run --plan out/benchmark-suites/qwen35-4b-vgm16/benchmark-suite-run.json --output out/benchmark-suites/qwen35-4b-vgm16/benchmark-suite-result.json --lm-eval "$env:LOCALAPPDATA\AppLens-LLM\BenchmarkTools\.venv\Scripts\lm_eval.exe" --use-llamacpp-proxy --local-screening-limit 20
 ```
 
+Before a run, generate a readiness report. This tells AppLens whether `lm-eval`, endpoint capabilities, and external official runners such as BFCL, BigCodeBench, LongBench v2, and RULER are ready, missing, or blocked:
+
+```powershell
+uv run applens-llm benchmark-readiness --plan out/benchmark-suites/qwen35-4b-vgm16/benchmark-suite-run.json --output out/benchmark-suites/qwen35-4b-vgm16/benchmark-readiness.json --lm-eval "$env:LOCALAPPDATA\AppLens-LLM\BenchmarkTools\.venv\Scripts\lm_eval.exe"
+```
+
 ```powershell
 uv run applens-llm benchmark-suite-plan --suite-run-id qwen35-4b-vgm16-tiny-v1 --model-id qwen35-4b-q4km --display-name "Qwen3.5 4B Q4_K_M" --family qwen --parameter-size-b 4 --quantization Q4_K_M --model-format gguf --model-path sanitized/models/qwen35-4b-q4km.gguf --chat-template qwen --thinking-mode off --reasoning-mode off --condition-id asus-px13-vgm16-ram16 --condition-label "ASUS PX13 VGM 16GB / RAM 16GB" --os-family windows --ram-gb 32 --vgm-enabled --vgm-dedicated-mb 16384 --system-ram-available-gb 16 --accelerator-id amd-igpu-0 --backend vulkan --device-selector Vulkan0 --context-tokens 16384 --output out/benchmark-suites/qwen35-4b-vgm16/benchmark-suite-run.json
 ```
@@ -200,6 +206,12 @@ Scorecards now accept `--capability-record` inputs from `applens-local-v1`. This
 
 ```powershell
 uv run applens-llm model-fit-scorecard --machine-profile data/machines.seed.jsonl --machine-id asus-laptop --model-candidates examples/asus-px13-model-candidates.example.json --benchmark-record out/benchmarks/qwen35-4b.json --capability-record out/local-capability/qwen35-4b-off.json --output out/scorecards/asus-px13-model-scorecard.json
+```
+
+Scorecards also accept official suite results. This is the preferred path for Tiny Suite V1 and Small Suite V1 evidence because pass, fail, unsupported, and local runtime rows stay attached to the model ranking and HTML dashboard:
+
+```powershell
+uv run applens-llm model-fit-scorecard --machine-profile data/machines.seed.jsonl --machine-id asus-laptop --model-candidates examples/asus-px13-model-candidates.example.json --benchmark-suite-result out/benchmark-suites/qwen35-4b-vgm16/benchmark-suite-result.json --output out/scorecards/asus-px13-model-scorecard.json
 ```
 
 Scorecards also accept `--context-envelope` inputs. This records advertised context separately from max tested and recommended context:

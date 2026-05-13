@@ -11,6 +11,7 @@ from applens_llm.autoresearch_manifest import write_self_fit_result
 from applens_llm.autoresearch_memory import promote_memory
 from applens_llm.autoresearch_runner import run_autoresearch_once
 from applens_llm.bench import run_openai_chat_benchmark
+from applens_llm.benchmark_readiness import skipped_endpoint_probe, write_benchmark_readiness
 from applens_llm.benchmark_suite import write_benchmark_suite_run
 from applens_llm.benchmark_suite_runner import run_benchmark_suite
 from applens_llm.blackboard import append_event, start_experiment
@@ -178,6 +179,25 @@ def main(argv: list[str] | None = None) -> int:
                 f"benchmark suite result {result['suite_run_id']} -> {args.output}; "
                 f"status={result['status']}; pass={result['summary']['passed']}; "
                 f"unsupported={result['summary']['unsupported']}; error={result['summary']['errored']}"
+            )
+            return 0
+        if args.command == "benchmark-readiness":
+            report = write_benchmark_readiness(
+                plan_path=args.plan,
+                output_path=args.output,
+                lm_eval_binary=args.lm_eval,
+                runner_paths={
+                    "bfcl-eval": args.bfcl_runner,
+                    "bigcodebench": args.bigcodebench_runner,
+                    "longbench-v2": args.longbench_runner,
+                    "ruler": args.ruler_runner,
+                },
+                endpoint_probe=skipped_endpoint_probe if args.skip_endpoint else None,
+            )
+            print(
+                f"benchmark readiness {report['suite_run_id']} -> {args.output}; "
+                f"status={report['status']}; tasks={len(report['task_readiness'])}; "
+                f"actions={len(report['next_actions'])}"
             )
             return 0
         if args.command == "eval":
@@ -524,6 +544,7 @@ def main(argv: list[str] | None = None) -> int:
                 machine_id=args.machine_id,
                 model_candidates_path=args.model_candidates,
                 benchmark_record_paths=args.benchmark_record,
+                benchmark_suite_result_paths=args.benchmark_suite_result,
                 experiment_summary_paths=args.experiment_summary,
                 capability_record_paths=args.capability_record,
                 context_envelope_paths=args.context_envelope,
@@ -709,6 +730,16 @@ def _build_parser() -> argparse.ArgumentParser:
     benchmark_suite_run.add_argument("--use-llamacpp-proxy", action="store_true")
     benchmark_suite_run.add_argument("--proxy-host", default="127.0.0.1")
     benchmark_suite_run.add_argument("--proxy-port", type=int, default=18081)
+
+    benchmark_readiness = subparsers.add_parser("benchmark-readiness")
+    benchmark_readiness.add_argument("--plan", type=Path, required=True)
+    benchmark_readiness.add_argument("--output", type=Path, required=True)
+    benchmark_readiness.add_argument("--lm-eval", type=Path, default=Path("lm_eval"))
+    benchmark_readiness.add_argument("--bfcl-runner")
+    benchmark_readiness.add_argument("--bigcodebench-runner")
+    benchmark_readiness.add_argument("--longbench-runner")
+    benchmark_readiness.add_argument("--ruler-runner")
+    benchmark_readiness.add_argument("--skip-endpoint", action="store_true")
 
     eval_parser = subparsers.add_parser("eval")
     eval_parser.add_argument("--examples", type=Path, required=True)
@@ -926,6 +957,7 @@ def _build_parser() -> argparse.ArgumentParser:
     model_fit_scorecard.add_argument("--machine-id")
     model_fit_scorecard.add_argument("--model-candidates", type=Path)
     model_fit_scorecard.add_argument("--benchmark-record", type=Path, action="append", default=[])
+    model_fit_scorecard.add_argument("--benchmark-suite-result", type=Path, action="append", default=[])
     model_fit_scorecard.add_argument("--experiment-summary", type=Path, action="append", default=[])
     model_fit_scorecard.add_argument("--capability-record", type=Path, action="append", default=[])
     model_fit_scorecard.add_argument("--context-envelope", type=Path, action="append", default=[])
