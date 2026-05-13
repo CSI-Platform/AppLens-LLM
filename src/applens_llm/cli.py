@@ -11,6 +11,7 @@ from applens_llm.autoresearch_manifest import write_self_fit_result
 from applens_llm.autoresearch_memory import promote_memory
 from applens_llm.autoresearch_runner import run_autoresearch_once
 from applens_llm.bench import run_openai_chat_benchmark
+from applens_llm.benchmark_suite import write_benchmark_suite_run
 from applens_llm.blackboard import append_event, start_experiment
 from applens_llm.capture_ingest import write_capture_records_jsonl
 from applens_llm.context_envelope import write_context_envelope
@@ -94,6 +95,68 @@ def main(argv: list[str] | None = None) -> int:
                 driver_evidence=driver_evidence,
             )
             print(f"{args.output} valid benchmark record: {record['run_id']}")
+            return 0
+        if args.command == "benchmark-suite-plan":
+            suite = write_benchmark_suite_run(
+                output_path=args.output,
+                suite_run_id=args.suite_run_id,
+                suite_id=args.suite_id,
+                scoring_mode=args.scoring_mode,
+                run_intent="plan_only",
+                repeats=args.repeats,
+                timeout_seconds_per_task=args.timeout_seconds_per_task,
+                allow_downloads=args.allow_downloads,
+                allow_network=args.allow_network,
+                expected_duration_minutes=args.expected_duration_minutes,
+                artifact_root=args.artifact_root,
+                model={
+                    "model_id": args.model_id,
+                    "display_name": args.display_name or args.model_id,
+                    "family": args.family,
+                    "parameter_size_b": args.parameter_size_b,
+                    "quantization": args.quantization,
+                    "model_format": args.model_format,
+                    "path": args.model_path,
+                    "sha256": args.model_sha256,
+                    "chat_template": args.chat_template,
+                    "thinking_mode": args.thinking_mode,
+                    "reasoning_mode": args.reasoning_mode,
+                },
+                machine_condition={
+                    "condition_id": args.condition_id,
+                    "label": args.condition_label,
+                    "os_family": args.os_family,
+                    "ram_gb": args.ram_gb,
+                    "vgm_state": {
+                        "enabled": args.vgm_enabled,
+                        "dedicated_mb": args.vgm_dedicated_mb,
+                        "system_ram_available_gb": args.system_ram_available_gb,
+                        "source": args.vgm_source,
+                    },
+                    "accelerator_ids": args.accelerator_id,
+                    "required_preflight": args.required_preflight,
+                    "evidence_paths": args.evidence_path,
+                },
+                runtime_lane={
+                    "engine": args.engine,
+                    "backend": args.backend,
+                    "device_selector": args.device_selector,
+                    "accelerator_ids": args.runtime_accelerator_id or args.accelerator_id,
+                    "endpoint": args.endpoint,
+                    "context_tokens": args.context_tokens,
+                    "batch_size": args.batch_size,
+                    "ubatch_size": args.ubatch_size,
+                    "threads": args.threads,
+                    "gpu_layers": args.gpu_layers,
+                    "kv_cache_type": args.kv_cache_type,
+                    "flash_attention": args.flash_attention,
+                    "extra_flags": args.extra_flag,
+                },
+            )
+            print(
+                f"benchmark suite {suite['suite_run_id']} -> {args.output}; "
+                f"suite={suite['suite']['suite_id']}; tasks={len(suite['benchmark_plan']['tasks'])}"
+            )
             return 0
         if args.command == "eval":
             report = evaluate_training_examples_file(args.examples)
@@ -551,6 +614,65 @@ def _build_parser() -> argparse.ArgumentParser:
         default="unknown",
         help="NVIDIA driver branch reported by the NVIDIA App; version is collected with nvidia-smi.",
     )
+
+    benchmark_suite = subparsers.add_parser("benchmark-suite-plan")
+    benchmark_suite.add_argument("--suite-run-id", required=True)
+    benchmark_suite.add_argument("--suite-id", choices=["tiny-v1", "small-v1"])
+    benchmark_suite.add_argument("--scoring-mode", choices=["local_screening", "certification"], default="local_screening")
+    benchmark_suite.add_argument("--model-id", required=True)
+    benchmark_suite.add_argument("--display-name")
+    benchmark_suite.add_argument("--family", default="unknown")
+    benchmark_suite.add_argument("--parameter-size-b", type=float, required=True)
+    benchmark_suite.add_argument("--quantization", default="unknown")
+    benchmark_suite.add_argument("--model-format", choices=["gguf", "safetensors", "ollama", "jan", "unknown"], default="unknown")
+    benchmark_suite.add_argument("--model-path", default="local")
+    benchmark_suite.add_argument("--model-sha256", default="unknown")
+    benchmark_suite.add_argument("--chat-template", default="unknown")
+    benchmark_suite.add_argument(
+        "--thinking-mode",
+        choices=["on", "off", "auto", "unsupported", "unknown"],
+        default="unknown",
+    )
+    benchmark_suite.add_argument(
+        "--reasoning-mode",
+        choices=["on", "off", "auto", "unsupported", "unknown"],
+        default="unknown",
+    )
+    benchmark_suite.add_argument("--condition-id", required=True)
+    benchmark_suite.add_argument("--condition-label", required=True)
+    benchmark_suite.add_argument("--os-family", default="unknown")
+    benchmark_suite.add_argument("--ram-gb", type=int, required=True)
+    benchmark_suite.add_argument("--vgm-enabled", action="store_true")
+    benchmark_suite.add_argument("--vgm-dedicated-mb", type=int, default=0)
+    benchmark_suite.add_argument("--system-ram-available-gb", type=int, required=True)
+    benchmark_suite.add_argument("--vgm-source", default="unknown")
+    benchmark_suite.add_argument("--accelerator-id", action="append", required=True)
+    benchmark_suite.add_argument("--required-preflight", action="append", default=["close_competing_llm_apps", "record_power_mode"])
+    benchmark_suite.add_argument("--evidence-path", action="append", default=[])
+    benchmark_suite.add_argument("--engine", default="llama.cpp")
+    benchmark_suite.add_argument(
+        "--backend",
+        choices=["cuda", "vulkan", "rocm", "hip", "directml", "metal", "openvino", "cpu", "npu", "mixed", "unknown"],
+        default="unknown",
+    )
+    benchmark_suite.add_argument("--device-selector", required=True)
+    benchmark_suite.add_argument("--runtime-accelerator-id", action="append", default=[])
+    benchmark_suite.add_argument("--endpoint", default="http://127.0.0.1:18080/v1")
+    benchmark_suite.add_argument("--context-tokens", type=int, required=True)
+    benchmark_suite.add_argument("--batch-size", type=int, default=2048)
+    benchmark_suite.add_argument("--ubatch-size", type=int, default=512)
+    benchmark_suite.add_argument("--threads", type=int, default=12)
+    benchmark_suite.add_argument("--gpu-layers", type=int, default=99)
+    benchmark_suite.add_argument("--kv-cache-type", choices=["f16", "q8_0", "q4_0", "auto", "unknown"], default="auto")
+    benchmark_suite.add_argument("--flash-attention", choices=["on", "off", "auto", "unsupported", "unknown"], default="auto")
+    benchmark_suite.add_argument("--extra-flag", action="append", default=[])
+    benchmark_suite.add_argument("--repeats", type=int, default=1)
+    benchmark_suite.add_argument("--timeout-seconds-per-task", type=int, default=900)
+    benchmark_suite.add_argument("--allow-downloads", action="store_true")
+    benchmark_suite.add_argument("--allow-network", action="store_true")
+    benchmark_suite.add_argument("--expected-duration-minutes", type=int)
+    benchmark_suite.add_argument("--artifact-root")
+    benchmark_suite.add_argument("--output", type=Path, required=True)
 
     eval_parser = subparsers.add_parser("eval")
     eval_parser.add_argument("--examples", type=Path, required=True)

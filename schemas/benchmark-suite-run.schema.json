@@ -1,0 +1,359 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://csi-platform.local/applens-llm/benchmark-suite-run.schema.json",
+  "title": "AppLens-LLM Benchmark Suite Run",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "suite_run_id",
+    "created_at",
+    "suite",
+    "model",
+    "machine_condition",
+    "runtime_lane",
+    "execution",
+    "benchmark_plan",
+    "output_contract",
+    "privacy"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "suite_run_id": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "suite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "suite_id",
+        "model_size_class",
+        "scoring_mode",
+        "benchmark_selection_review"
+      ],
+      "properties": {
+        "suite_id": {
+          "type": "string",
+          "enum": ["tiny-v1", "small-v1"]
+        },
+        "model_size_class": {
+          "type": "string",
+          "enum": ["tiny", "small"]
+        },
+        "scoring_mode": {
+          "type": "string",
+          "enum": ["local_screening", "certification"]
+        },
+        "benchmark_selection_review": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reviewed_at",
+            "decision",
+            "long_context_primary",
+            "diagnostic_long_context",
+            "sources"
+          ],
+          "properties": {
+            "reviewed_at": { "type": "string", "format": "date-time" },
+            "decision": { "type": "string", "minLength": 1 },
+            "long_context_primary": { "type": "string", "const": "LongBench v2" },
+            "diagnostic_long_context": { "type": "string", "const": "RULER" },
+            "sources": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/source" }
+            }
+          }
+        }
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_id",
+        "display_name",
+        "family",
+        "parameter_size_b",
+        "quantization",
+        "model_format",
+        "path",
+        "sha256",
+        "chat_template",
+        "thinking_mode",
+        "reasoning_mode"
+      ],
+      "properties": {
+        "model_id": { "type": "string", "minLength": 1 },
+        "display_name": { "type": "string", "minLength": 1 },
+        "family": { "type": "string", "minLength": 1 },
+        "parameter_size_b": { "type": "number", "minimum": 0 },
+        "quantization": { "type": "string", "minLength": 1 },
+        "model_format": {
+          "type": "string",
+          "enum": ["gguf", "safetensors", "ollama", "jan", "unknown"]
+        },
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "minLength": 1 },
+        "chat_template": { "type": "string", "minLength": 1 },
+        "thinking_mode": {
+          "type": "string",
+          "enum": ["on", "off", "auto", "unsupported", "unknown"]
+        },
+        "reasoning_mode": {
+          "type": "string",
+          "enum": ["on", "off", "auto", "unsupported", "unknown"]
+        }
+      }
+    },
+    "machine_condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "condition_id",
+        "label",
+        "os_family",
+        "ram_gb",
+        "vgm_state",
+        "accelerator_ids",
+        "required_preflight",
+        "evidence_paths"
+      ],
+      "properties": {
+        "condition_id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "os_family": { "type": "string", "minLength": 1 },
+        "ram_gb": { "type": "integer", "minimum": 0 },
+        "vgm_state": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "dedicated_mb", "system_ram_available_gb", "source"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "dedicated_mb": { "type": "integer", "minimum": 0 },
+            "system_ram_available_gb": { "type": "integer", "minimum": 0 },
+            "source": { "type": "string", "minLength": 1 }
+          }
+        },
+        "accelerator_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          }
+        },
+        "required_preflight": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "evidence_paths": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "runtime_lane": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "engine",
+        "backend",
+        "device_selector",
+        "accelerator_ids",
+        "endpoint",
+        "context_tokens",
+        "batch_size",
+        "ubatch_size",
+        "threads",
+        "gpu_layers",
+        "kv_cache_type",
+        "flash_attention",
+        "extra_flags"
+      ],
+      "properties": {
+        "engine": {
+          "type": "string",
+          "enum": ["llama.cpp", "ollama", "jan", "lm_studio", "vllm", "sglang", "transformers", "unknown"]
+        },
+        "backend": {
+          "type": "string",
+          "enum": ["cuda", "vulkan", "rocm", "hip", "directml", "metal", "openvino", "cpu", "npu", "mixed", "unknown"]
+        },
+        "device_selector": { "type": "string", "minLength": 1 },
+        "accelerator_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          }
+        },
+        "endpoint": { "type": "string", "minLength": 1 },
+        "context_tokens": { "type": "integer", "minimum": 1 },
+        "batch_size": { "type": "integer", "minimum": 1 },
+        "ubatch_size": { "type": "integer", "minimum": 1 },
+        "threads": { "type": "integer", "minimum": 1 },
+        "gpu_layers": { "type": "integer", "minimum": 0 },
+        "kv_cache_type": {
+          "type": "string",
+          "enum": ["f16", "q8_0", "q4_0", "auto", "unknown"]
+        },
+        "flash_attention": {
+          "type": "string",
+          "enum": ["on", "off", "auto", "unsupported", "unknown"]
+        },
+        "extra_flags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_intent",
+        "repeats",
+        "timeout_seconds_per_task",
+        "allow_downloads",
+        "allow_network",
+        "expected_duration_minutes",
+        "benchmark_runner",
+        "command_templates"
+      ],
+      "properties": {
+        "run_intent": {
+          "type": "string",
+          "enum": ["plan_only", "local_screening", "certification"]
+        },
+        "repeats": { "type": "integer", "minimum": 1 },
+        "timeout_seconds_per_task": { "type": "integer", "minimum": 1 },
+        "allow_downloads": { "type": "boolean" },
+        "allow_network": { "type": "boolean" },
+        "expected_duration_minutes": { "type": "integer", "minimum": 1 },
+        "benchmark_runner": {
+          "type": "string",
+          "enum": ["lm-evaluation-harness", "mixed"]
+        },
+        "command_templates": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "benchmark_plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tasks",
+        "local_metrics",
+        "comparison_keys",
+        "invalidation_keys",
+        "notes"
+      ],
+      "properties": {
+        "tasks": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/task" }
+        },
+        "local_metrics": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "comparison_keys": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "invalidation_keys": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "notes": { "type": "string", "minLength": 1 }
+      }
+    },
+    "output_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_root", "required_artifacts", "failure_policy"],
+      "properties": {
+        "artifact_root": { "type": "string", "minLength": 1 },
+        "required_artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "failure_policy": { "type": "string", "minLength": 1 }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit_safe", "local_paths_included"],
+      "properties": {
+        "commit_safe": { "type": "boolean" },
+        "local_paths_included": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "url", "accessed_at", "reason"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "url": { "type": "string", "minLength": 1 },
+        "accessed_at": { "type": "string", "format": "date-time" },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_id",
+        "benchmark",
+        "category",
+        "runner",
+        "task_ref",
+        "mode",
+        "required_for_suite",
+        "scoring",
+        "sample_policy",
+        "context_tokens",
+        "notes"
+      ],
+      "properties": {
+        "task_id": { "type": "string", "minLength": 1 },
+        "benchmark": { "type": "string", "minLength": 1 },
+        "category": {
+          "type": "string",
+          "enum": ["instruction_following", "reasoning", "math", "coding", "tool_calling", "long_context"]
+        },
+        "runner": { "type": "string", "minLength": 1 },
+        "task_ref": { "type": "string", "minLength": 1 },
+        "mode": {
+          "type": "string",
+          "enum": ["zero_shot", "few_shot", "prompt_tool_calling", "execution", "context_taper", "finalist_only"]
+        },
+        "required_for_suite": { "type": "boolean" },
+        "scoring": { "type": "string", "minLength": 1 },
+        "sample_policy": { "type": "string", "minLength": 1 },
+        "context_tokens": { "type": "integer", "minimum": 0 },
+        "notes": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

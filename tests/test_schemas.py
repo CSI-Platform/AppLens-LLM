@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_seed_artifacts_match_their_schemas() -> None:
     validate_document("deployment-plan", ROOT / "examples" / "gaming-pc-deployment-plan.json")
     validate_document("benchmark-record", ROOT / "examples" / "gaming-pc-benchmark-record.json")
+    validate_document("benchmark-suite-run", ROOT / "examples" / "asus-px13-benchmark-suite-run.example.json")
     validate_document("fit-report", ROOT / "examples" / "asus-px13-fit-report.example.json")
     validate_document("model-fit-scorecard", ROOT / "examples" / "asus-px13-model-fit-scorecard.example.json")
 

@@ -15,7 +15,7 @@ AppLens captures the raw machine and local AI inventory. AppLens-Tune prepares t
 ## Milestone 0: Evidence Foundation
 
 - Create standalone AppLens-LLM repo.
-- Track deployment, benchmark, training, hardware topology, runtime lane, blackboard, fit report, and model scorecard schemas.
+- Track deployment, benchmark, benchmark-suite, training, hardware topology, runtime lane, blackboard, fit report, and model scorecard schemas.
 - Track accelerator memory claims separately from proven usable inference capacity.
 - Add seed examples from the gaming PC, ASUS hybrid VGM case, and policy contrast cases.
 - Add schema validation CLI and tests.
@@ -43,9 +43,11 @@ AppLens captures the raw machine and local AI inventory. AppLens-Tune prepares t
 ## Milestone 2: Readiness And Benchmark Loop
 
 - Let AppLens-Tune feed readiness state into scorecards: VGM active, drivers present, ports available, runtime binaries found, thermal/power notes, and restart-required state.
+- Use `benchmark-suite-run` before model comparisons so model, machine condition, runtime lane, official benchmark tasks, local metrics, and output artifacts are fixed before a run starts.
 - Add repeat benchmark runs for top-ranked candidate models.
-- Standardize `applens-local-v1` as the capability eval beside `llama-bench`.
-- Score strict JSON, tool-call emulation, coding, hardware reasoning, benchmark interpretation, safety boundaries, handoff planning, and thinking-mode behavior.
+- Standardize `tiny-v1` for models at or below 4.5B using IFEval, ARC-Challenge, HellaSwag, GSM8K, BFCL prompt mode, BigCodeBench-Hard screening, LongBench v2 screening, and RULER taper.
+- Standardize `small-v1` for models above 4.5B and at or below 30B using the Open LLM Leaderboard v2 family, BFCL V4, BigCodeBench-Hard, LongBench v2, RULER, and finalist-only LiveBench.
+- Treat `applens-local-v1` as a smoke/local-agent probe beside official benchmark evidence, not as a formal model capability score.
 - Add `context-envelope` tapering from advertised model context down to proven useful local context.
 - Add long-context observations for loadability, stability, throughput, retrieval, summary, coding, and JSON-after-long-context behavior.
 - Attach AMD Software and NVIDIA telemetry summaries where available.

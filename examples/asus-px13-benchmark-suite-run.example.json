@@ -1,0 +1,286 @@
+{
+  "benchmark_plan": {
+    "comparison_keys": [
+      "model_id",
+      "suite_id",
+      "condition_id",
+      "vgm_state",
+      "backend",
+      "accelerator_ids",
+      "context_tokens",
+      "thinking_mode",
+      "reasoning_mode",
+      "quantization",
+      "llama_cpp_build"
+    ],
+    "invalidation_keys": [
+      "model_sha256",
+      "model_quantization",
+      "chat_template",
+      "driver_version",
+      "runtime_build",
+      "backend",
+      "accelerator_ids",
+      "vgm_state",
+      "context_tokens",
+      "kv_cache_type",
+      "flash_attention"
+    ],
+    "local_metrics": [
+      "prompt_tokens_per_second",
+      "generation_tokens_per_second",
+      "time_to_first_token_ms",
+      "wall_time_seconds",
+      "peak_device_memory_mb",
+      "peak_system_memory_gb",
+      "cpu_spill_mb",
+      "oom_count",
+      "crash_count",
+      "fallback_count",
+      "thermal_throttle_observed",
+      "repeat_variance_pct"
+    ],
+    "notes": "local_screening runs may use official subsets for practical local comparison; they are not leaderboard-comparable certification results until full task counts and official settings are used.",
+    "tasks": [
+      {
+        "benchmark": "IFEval",
+        "category": "instruction_following",
+        "context_tokens": 0,
+        "mode": "zero_shot",
+        "notes": "Official benchmark task; local screening subsets must be labeled separately from certification runs.",
+        "required_for_suite": true,
+        "runner": "lm-evaluation-harness",
+        "sample_policy": "official_subset_for_local_screening",
+        "scoring": "strict instruction accuracy",
+        "task_id": "ifeval",
+        "task_ref": "ifeval"
+      },
+      {
+        "benchmark": "ARC-Challenge",
+        "category": "reasoning",
+        "context_tokens": 0,
+        "mode": "few_shot",
+        "notes": "Official benchmark task; local screening subsets must be labeled separately from certification runs.",
+        "required_for_suite": true,
+        "runner": "lm-evaluation-harness",
+        "sample_policy": "official_subset_for_local_screening",
+        "scoring": "normalized accuracy",
+        "task_id": "arc_challenge",
+        "task_ref": "arc_challenge"
+      },
+      {
+        "benchmark": "HellaSwag",
+        "category": "reasoning",
+        "context_tokens": 0,
+        "mode": "few_shot",
+        "notes": "Official benchmark task; local screening subsets must be labeled separately from certification runs.",
+        "required_for_suite": true,
+        "runner": "lm-evaluation-harness",
+        "sample_policy": "official_subset_for_local_screening",
+        "scoring": "normalized accuracy",
+        "task_id": "hellaswag",
+        "task_ref": "hellaswag"
+      },
+      {
+        "benchmark": "GSM8K",
+        "category": "math",
+        "context_tokens": 0,
+        "mode": "few_shot",
+        "notes": "Official benchmark task; local screening subsets must be labeled separately from certification runs.",
+        "required_for_suite": true,
+        "runner": "lm-evaluation-harness",
+        "sample_policy": "official_subset_for_local_screening",
+        "scoring": "exact-match extracted answer",
+        "task_id": "gsm8k",
+        "task_ref": "gsm8k"
+      },
+      {
+        "benchmark": "BFCL V4",
+        "category": "tool_calling",
+        "context_tokens": 0,
+        "mode": "prompt_tool_calling",
+        "notes": "Official benchmark task; local screening subsets must be labeled separately from certification runs.",
+        "required_for_suite": true,
+        "runner": "bfcl-eval",
+        "sample_policy": "prompt_mode_for_non_native_tool_models",
+        "scoring": "tool-call accuracy",
+        "task_id": "bfcl_prompt",
+        "task_ref": "prompt-mode"
+      },
+      {
+        "benchmark": "BigCodeBench-Hard",
+        "category": "coding",
+        "context_tokens": 0,
+        "mode": "execution",
+        "notes": "Official benchmark task; local screening subsets must be labeled separately from certification runs.",
+        "required_for_suite": true,
+        "runner": "bigcodebench",
+        "sample_policy": "screening_subset",
+        "scoring": "pass@1 with executable tests",
+        "task_id": "bigcodebench_hard_screening",
+        "task_ref": "hard-instruct"
+      },
+      {
+        "benchmark": "LongBench v2",
+        "category": "long_context",
+        "context_tokens": 16384,
+        "mode": "zero_shot",
+        "notes": "Official benchmark task; local screening subsets must be labeled separately from certification runs.",
+        "required_for_suite": true,
+        "runner": "longbench-v2",
+        "sample_policy": "screening_subset_under_local_time_budget",
+        "scoring": "multiple-choice accuracy",
+        "task_id": "longbench_v2_screening",
+        "task_ref": "short-medium-mcqa"
+      },
+      {
+        "benchmark": "RULER",
+        "category": "long_context",
+        "context_tokens": 16384,
+        "mode": "context_taper",
+        "notes": "Official benchmark task; local screening subsets must be labeled separately from certification runs.",
+        "required_for_suite": true,
+        "runner": "ruler",
+        "sample_policy": "diagnostic_taper_at_configured_context_tiers",
+        "scoring": "effective context score",
+        "task_id": "ruler_context_taper",
+        "task_ref": "niah+aggregation+taper"
+      }
+    ]
+  },
+  "created_at": "2026-05-13T16:21:19Z",
+  "execution": {
+    "allow_downloads": false,
+    "allow_network": false,
+    "benchmark_runner": "mixed",
+    "command_templates": [
+      "start llama-server with runtime_lane settings and bind to 127.0.0.1",
+      "lm-eval run --model local-chat-completions --tasks <task_ref> --output_path <artifact_root>/lm-eval",
+      "bfcl-eval --model <model_id> --test-category <prompt-or-native> --result-dir <artifact_root>/bfcl",
+      "bigcodebench.generate/evaluate for configured screening or hard split",
+      "run LongBench v2 configured subset through the local OpenAI-compatible endpoint",
+      "run RULER taper at configured context tiers and record effective context score"
+    ],
+    "expected_duration_minutes": 90,
+    "repeats": 1,
+    "run_intent": "plan_only",
+    "timeout_seconds_per_task": 900
+  },
+  "machine_condition": {
+    "accelerator_ids": [
+      "amd-igpu-0"
+    ],
+    "condition_id": "asus-px13-vgm16-ram16",
+    "evidence_paths": [],
+    "label": "ASUS PX13 VGM 16GB / RAM 16GB",
+    "os_family": "windows",
+    "ram_gb": 32,
+    "required_preflight": [
+      "close_competing_llm_apps",
+      "record_power_mode"
+    ],
+    "vgm_state": {
+      "dedicated_mb": 16384,
+      "enabled": true,
+      "source": "AMD Software: Adrenalin Edition",
+      "system_ram_available_gb": 16
+    }
+  },
+  "model": {
+    "chat_template": "qwen",
+    "display_name": "Qwen3.5 4B Q4_K_M",
+    "family": "qwen",
+    "model_format": "gguf",
+    "model_id": "qwen35-4b-q4km",
+    "parameter_size_b": 4.0,
+    "path": "sanitized/models/qwen35-4b-q4km.gguf",
+    "quantization": "Q4_K_M",
+    "reasoning_mode": "off",
+    "sha256": "unknown",
+    "thinking_mode": "off"
+  },
+  "output_contract": {
+    "artifact_root": "out/benchmark-suites/asus-px13-qwen35-4b-vgm16-tiny-v1",
+    "failure_policy": "Failed, crashed, timed out, OOM, or fallback rows must be retained with invalid throughput and explicit failure modes.",
+    "required_artifacts": [
+      "benchmark-suite-run",
+      "raw_logs",
+      "per_task_results",
+      "benchmark_suite_summary",
+      "scorecard_inputs",
+      "html_report"
+    ]
+  },
+  "privacy": {
+    "commit_safe": true,
+    "local_paths_included": false
+  },
+  "runtime_lane": {
+    "accelerator_ids": [
+      "amd-igpu-0"
+    ],
+    "backend": "vulkan",
+    "batch_size": 2048,
+    "context_tokens": 16384,
+    "device_selector": "Vulkan0",
+    "endpoint": "http://127.0.0.1:18080/v1",
+    "engine": "llama.cpp",
+    "extra_flags": [],
+    "flash_attention": "auto",
+    "gpu_layers": 99,
+    "kv_cache_type": "auto",
+    "threads": 12,
+    "ubatch_size": 512
+  },
+  "schema_version": "0.1",
+  "suite": {
+    "benchmark_selection_review": {
+      "decision": "Use official benchmark families for capability scoring. LongBench v2 is the primary long-context capability benchmark; RULER is retained as a repeatable diagnostic context taper.",
+      "diagnostic_long_context": "RULER",
+      "long_context_primary": "LongBench v2",
+      "reviewed_at": "2026-05-13T16:21:19Z",
+      "sources": [
+        {
+          "accessed_at": "2026-05-13T16:21:19Z",
+          "reason": "Current open model leaderboard task family: IFEval, BBH, MATH Lvl 5, GPQA, MuSR, and MMLU-Pro.",
+          "title": "Hugging Face Open LLM Leaderboard v2",
+          "url": "https://huggingface.co/docs/leaderboards/main/open_llm_leaderboard/about"
+        },
+        {
+          "accessed_at": "2026-05-13T16:21:19Z",
+          "reason": "Primary reproducible runner for broad local and API model evaluation tasks.",
+          "title": "EleutherAI LM Evaluation Harness",
+          "url": "https://lm-evaluation-harness.readthedocs.io/"
+        },
+        {
+          "accessed_at": "2026-05-13T16:21:19Z",
+          "reason": "Current tool/function-calling benchmark with prompt-mode support for non-native tool models.",
+          "title": "Berkeley Function Calling Leaderboard V4",
+          "url": "https://gorilla.cs.berkeley.edu/leaderboard"
+        },
+        {
+          "accessed_at": "2026-05-13T16:21:19Z",
+          "reason": "Practical code-generation benchmark with an official hard split for deeper coding evidence.",
+          "title": "BigCodeBench",
+          "url": "https://github.com/bigcode-project/bigcodebench"
+        },
+        {
+          "accessed_at": "2026-05-13T16:21:19Z",
+          "reason": "Primary long-context capability benchmark for realistic reasoning across documents, dialogue, code repos, and structured data.",
+          "title": "LongBench v2",
+          "url": "https://longbench2.github.io/"
+        },
+        {
+          "accessed_at": "2026-05-13T16:21:19Z",
+          "reason": "Repeatable diagnostic benchmark for effective context length, context tapering, retrieval, tracing, aggregation, and QA.",
+          "title": "NVIDIA RULER",
+          "url": "https://github.com/NVIDIA/RULER"
+        }
+      ]
+    },
+    "model_size_class": "tiny",
+    "scoring_mode": "local_screening",
+    "suite_id": "tiny-v1"
+  },
+  "suite_run_id": "asus-px13-qwen35-4b-vgm16-tiny-v1"
+}

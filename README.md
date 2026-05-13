@@ -12,6 +12,7 @@ It turns AppLens/AppLens-Tune machine evidence, workload goals, and benchmark re
 - A validation CLI for JSON and JSONL artifacts.
 - A capture ingestion CLI for AppLens `.md` reports and legacy `.txt` reports.
 - An OpenAI-compatible benchmark runner for Jan, llama.cpp, and similar local endpoints.
+- A `benchmark-suite-run` artifact that standardizes model, machine condition, runtime lane, official benchmark tasks, and local metric collection before comparable model tests run.
 - An `applens-local-v1` capability eval for strict JSON, tool-call emulation, coding, hardware reasoning, safety, handoff planning, and thinking-mode comparison.
 - A `context-envelope` artifact that tapers from advertised context windows down to proven local useful context.
 - A blackboard-backed runtime orchestrator for comparing portable local model lanes.
@@ -56,6 +57,7 @@ uv run applens-llm validate --schema fit-report examples/asus-px13-fit-report.ex
 uv run applens-llm ingest-captures --source ../AppLens/raw --output data/raw/capture-records.jsonl
 uv run applens-llm eval --examples data/examples.seed.jsonl --output out/eval-report.json
 uv run applens-llm local-capability-eval --responses out/local-capability/responses.json --thinking-mode off --output out/local-capability/qwen35-4b-off.json
+uv run applens-llm benchmark-suite-plan --suite-run-id qwen35-4b-vgm16-tiny-v1 --model-id qwen35-4b-q4km --display-name "Qwen3.5 4B Q4_K_M" --family qwen --parameter-size-b 4 --quantization Q4_K_M --model-format gguf --model-path sanitized/models/qwen35-4b-q4km.gguf --chat-template qwen --thinking-mode off --reasoning-mode off --condition-id asus-px13-vgm16-ram16 --condition-label "ASUS PX13 VGM 16GB / RAM 16GB" --os-family windows --ram-gb 32 --vgm-enabled --vgm-dedicated-mb 16384 --system-ram-available-gb 16 --accelerator-id amd-igpu-0 --backend vulkan --device-selector Vulkan0 --context-tokens 16384 --output out/benchmark-suites/qwen35-4b-vgm16/benchmark-suite-run.json
 uv run applens-llm context-envelope --machine-profile out/pipeline/asus-px13-current-machine-profile.json --model-candidates out/pipeline/current-downloaded-model-candidates.json --output out/context/asus-px13-context-envelope.json
 uv run applens-llm deployment-plan --scorecard out/scorecards/asus-px13-model-scorecard.json --workload-name "Oracle autoresearch" --output out/deployment-plans/asus-px13-outfit.json
 uv run applens-llm vgm-snapshot --label before-vgm --output out/vgm/before-vgm.json
@@ -75,6 +77,21 @@ uv run applens-llm bench --endpoint http://127.0.0.1:18080/v1 --engine llama.cpp
 ```
 
 Generated benchmark output is ignored under `out/`.
+
+## Benchmark Suite Runs
+
+`benchmark-suite-run` is the standardized pre-test contract. It is the artifact to create before asking AppLens-LLM to compare a model under a condition such as `VGM 16GB / RAM 16GB`, `VGM off / RAM 32GB`, CUDA, Vulkan, ROCm/HIP, CPU, or another runtime lane.
+
+The first two suites are:
+
+- `tiny-v1` for models at or below 4.5B parameters: `IFEval`, `ARC-Challenge`, `HellaSwag`, `GSM8K`, `BFCL` prompt mode, `BigCodeBench-Hard` screening, `LongBench v2` screening, and `RULER` context taper.
+- `small-v1` for models above 4.5B and at or below 30B parameters: Open LLM Leaderboard v2 family (`IFEval`, `BBH`, `MATH Lvl 5`, `GPQA`, `MuSR`, `MMLU-Pro`) plus `BFCL V4`, `BigCodeBench-Hard`, `LongBench v2`, `RULER`, and optional finalist-only `LiveBench`.
+
+As of the May 13, 2026 review, AppLens-LLM treats `LongBench v2` as the primary long-context capability benchmark because it tests realistic long-context reasoning across documents, dialogue, code repositories, and structured data. `RULER` remains the repeatable diagnostic taper for effective context length. Local screening subsets must be labeled as `local_screening`; only full official settings should be treated as certification or leaderboard-comparable.
+
+```powershell
+uv run applens-llm benchmark-suite-plan --suite-run-id qwen35-4b-vgm16-tiny-v1 --model-id qwen35-4b-q4km --display-name "Qwen3.5 4B Q4_K_M" --family qwen --parameter-size-b 4 --quantization Q4_K_M --model-format gguf --model-path sanitized/models/qwen35-4b-q4km.gguf --chat-template qwen --thinking-mode off --reasoning-mode off --condition-id asus-px13-vgm16-ram16 --condition-label "ASUS PX13 VGM 16GB / RAM 16GB" --os-family windows --ram-gb 32 --vgm-enabled --vgm-dedicated-mb 16384 --system-ram-available-gb 16 --accelerator-id amd-igpu-0 --backend vulkan --device-selector Vulkan0 --context-tokens 16384 --output out/benchmark-suites/qwen35-4b-vgm16/benchmark-suite-run.json
+```
 
 ## Runtime Lanes
 
@@ -199,7 +216,7 @@ The plan keeps the cloud/API model as planner-supervisor unless a local model cl
 
 ## Local Capability Eval
 
-`llama.cpp` `llama-bench` remains the hardware proof: backend, device placement, tokens/sec, OOM, fallback, and thermal behavior. `applens-local-v1` is the local-agent proof. It is inspired by public eval directions such as [BFCL](https://gorilla.cs.berkeley.edu/leaderboard.html) for tool calling, [LiveCodeBench](https://livecodebench.github.io/) for executable coding checks, IFEval-style instruction following, and [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) as a broader eval framework.
+`llama.cpp` `llama-bench` remains the hardware proof: backend, device placement, tokens/sec, OOM, fallback, and thermal behavior. `benchmark-suite-run` is the official benchmark plan. `applens-local-v1` remains a smoke/local-agent probe and must not be treated as a formal capability score.
 
 The V1 suite scores:
 

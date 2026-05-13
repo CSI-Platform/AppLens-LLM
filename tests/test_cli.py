@@ -151,6 +151,70 @@ def test_cli_checks_runtime_lanes(tmp_path: Path) -> None:
     assert "1 runtime lanes valid" in result.stdout
 
 
+def test_cli_writes_benchmark_suite_plan(tmp_path: Path) -> None:
+    output = tmp_path / "benchmark-suite.json"
+
+    result = run_cli(
+        "benchmark-suite-plan",
+        "--suite-run-id",
+        "qwen35-4b-vgm16-plan",
+        "--model-id",
+        "qwen35-4b-q4km",
+        "--display-name",
+        "Qwen3.5 4B Q4_K_M",
+        "--family",
+        "qwen",
+        "--parameter-size-b",
+        "4",
+        "--quantization",
+        "Q4_K_M",
+        "--model-format",
+        "gguf",
+        "--model-path",
+        "sanitized/models/model.gguf",
+        "--chat-template",
+        "qwen",
+        "--thinking-mode",
+        "off",
+        "--reasoning-mode",
+        "off",
+        "--condition-id",
+        "asus-px13-vgm16-ram16",
+        "--condition-label",
+        "ASUS PX13 VGM 16GB",
+        "--os-family",
+        "windows",
+        "--ram-gb",
+        "32",
+        "--vgm-enabled",
+        "--vgm-dedicated-mb",
+        "16384",
+        "--system-ram-available-gb",
+        "16",
+        "--accelerator-id",
+        "amd-igpu-0",
+        "--engine",
+        "llama.cpp",
+        "--backend",
+        "vulkan",
+        "--device-selector",
+        "Vulkan0",
+        "--endpoint",
+        "http://127.0.0.1:18080/v1",
+        "--context-tokens",
+        "16384",
+        "--output",
+        str(output),
+    )
+
+    assert result.returncode == 0
+    assert "benchmark suite qwen35-4b-vgm16-plan" in result.stdout
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    validate_payload("benchmark-suite-run", payload)
+    assert payload["suite"]["suite_id"] == "tiny-v1"
+    assert payload["machine_condition"]["vgm_state"]["dedicated_mb"] == 16384
+
+
 def test_cli_rejects_invalid_runtime_lanes(tmp_path: Path) -> None:
     config = tmp_path / "lanes.json"
     config.write_text('{"schema_version":"0.1","lanes":[]}', encoding="utf-8")
