@@ -49,24 +49,36 @@
         "mode": "zero_shot",
         "notes": "Official benchmark task; local screening subsets must be labeled separately from certification runs.",
         "required_for_suite": true,
+        "required_lm_call": "generate_until",
         "runner": "lm-evaluation-harness",
+        "runner_fallback_policy": "mark_failed_if_empty_content",
+        "runner_requirements": [
+          "chat/completions returns non-empty message.content",
+          "thinking output disabled or stripped before scoring"
+        ],
         "sample_policy": "official_subset_for_local_screening",
         "scoring": "strict instruction accuracy",
         "task_id": "ifeval",
         "task_ref": "ifeval"
       },
       {
-        "benchmark": "ARC-Challenge",
+        "benchmark": "ARC-Challenge Chat",
         "category": "reasoning",
         "context_tokens": 0,
-        "mode": "few_shot",
+        "mode": "zero_shot",
         "notes": "Official benchmark task; local screening subsets must be labeled separately from certification runs.",
         "required_for_suite": true,
+        "required_lm_call": "generate_until",
         "runner": "lm-evaluation-harness",
+        "runner_fallback_policy": "mark_failed_if_reasoning_tags_remain",
+        "runner_requirements": [
+          "chat/completions returns final answer text",
+          "thinking tags stripped before exact-match scoring"
+        ],
         "sample_policy": "official_subset_for_local_screening",
-        "scoring": "normalized accuracy",
-        "task_id": "arc_challenge",
-        "task_ref": "arc_challenge"
+        "scoring": "exact-match answer-letter accuracy",
+        "task_id": "arc_challenge_chat",
+        "task_ref": "arc_challenge_chat"
       },
       {
         "benchmark": "HellaSwag",
@@ -75,7 +87,13 @@
         "mode": "few_shot",
         "notes": "Official benchmark task; local screening subsets must be labeled separately from certification runs.",
         "required_for_suite": true,
+        "required_lm_call": "loglikelihood",
         "runner": "lm-evaluation-harness",
+        "runner_fallback_policy": "mark_unsupported_do_not_substitute_custom_generation",
+        "runner_requirements": [
+          "prompt token logprobs for continuation scoring",
+          "tokenizer-compatible context length accounting"
+        ],
         "sample_policy": "official_subset_for_local_screening",
         "scoring": "normalized accuracy",
         "task_id": "hellaswag",
@@ -88,7 +106,13 @@
         "mode": "few_shot",
         "notes": "Official benchmark task; local screening subsets must be labeled separately from certification runs.",
         "required_for_suite": true,
+        "required_lm_call": "generate_until",
         "runner": "lm-evaluation-harness",
+        "runner_fallback_policy": "mark_failed_if_no_extractable_answer",
+        "runner_requirements": [
+          "chat/completions returns extractable final answer",
+          "thinking output disabled or stripped before scoring"
+        ],
         "sample_policy": "official_subset_for_local_screening",
         "scoring": "exact-match extracted answer",
         "task_id": "gsm8k",
@@ -101,7 +125,13 @@
         "mode": "prompt_tool_calling",
         "notes": "Official benchmark task; local screening subsets must be labeled separately from certification runs.",
         "required_for_suite": true,
+        "required_lm_call": "external_execution",
         "runner": "bfcl-eval",
+        "runner_fallback_policy": "mark_unsupported_if_runner_unavailable",
+        "runner_requirements": [
+          "BFCL prompt-mode runner available",
+          "OpenAI-compatible generation endpoint"
+        ],
         "sample_policy": "prompt_mode_for_non_native_tool_models",
         "scoring": "tool-call accuracy",
         "task_id": "bfcl_prompt",
@@ -114,7 +144,13 @@
         "mode": "execution",
         "notes": "Official benchmark task; local screening subsets must be labeled separately from certification runs.",
         "required_for_suite": true,
+        "required_lm_call": "external_execution",
         "runner": "bigcodebench",
+        "runner_fallback_policy": "mark_unsupported_if_execution_sandbox_unavailable",
+        "runner_requirements": [
+          "BigCodeBench runner available",
+          "sandboxed code execution configured"
+        ],
         "sample_policy": "screening_subset",
         "scoring": "pass@1 with executable tests",
         "task_id": "bigcodebench_hard_screening",
@@ -127,7 +163,13 @@
         "mode": "zero_shot",
         "notes": "Official benchmark task; local screening subsets must be labeled separately from certification runs.",
         "required_for_suite": true,
+        "required_lm_call": "generate_until",
         "runner": "longbench-v2",
+        "runner_fallback_policy": "mark_failed_if_context_truncates_unexpectedly",
+        "runner_requirements": [
+          "LongBench v2 data available",
+          "configured context fits runtime lane"
+        ],
         "sample_policy": "screening_subset_under_local_time_budget",
         "scoring": "multiple-choice accuracy",
         "task_id": "longbench_v2_screening",
@@ -140,7 +182,13 @@
         "mode": "context_taper",
         "notes": "Official benchmark task; local screening subsets must be labeled separately from certification runs.",
         "required_for_suite": true,
+        "required_lm_call": "context_diagnostic",
         "runner": "ruler",
+        "runner_fallback_policy": "mark_failed_if_context_tier_ooms",
+        "runner_requirements": [
+          "RULER repo available",
+          "configured context tiers fit runtime lane"
+        ],
         "sample_policy": "diagnostic_taper_at_configured_context_tiers",
         "scoring": "effective context score",
         "task_id": "ruler_context_taper",
@@ -148,7 +196,7 @@
       }
     ]
   },
-  "created_at": "2026-05-13T16:21:19Z",
+  "created_at": "2026-05-13T17:24:08Z",
   "execution": {
     "allow_downloads": false,
     "allow_network": false,
@@ -238,40 +286,40 @@
       "decision": "Use official benchmark families for capability scoring. LongBench v2 is the primary long-context capability benchmark; RULER is retained as a repeatable diagnostic context taper.",
       "diagnostic_long_context": "RULER",
       "long_context_primary": "LongBench v2",
-      "reviewed_at": "2026-05-13T16:21:19Z",
+      "reviewed_at": "2026-05-13T17:24:08Z",
       "sources": [
         {
-          "accessed_at": "2026-05-13T16:21:19Z",
+          "accessed_at": "2026-05-13T17:24:08Z",
           "reason": "Current open model leaderboard task family: IFEval, BBH, MATH Lvl 5, GPQA, MuSR, and MMLU-Pro.",
           "title": "Hugging Face Open LLM Leaderboard v2",
           "url": "https://huggingface.co/docs/leaderboards/main/open_llm_leaderboard/about"
         },
         {
-          "accessed_at": "2026-05-13T16:21:19Z",
+          "accessed_at": "2026-05-13T17:24:08Z",
           "reason": "Primary reproducible runner for broad local and API model evaluation tasks.",
           "title": "EleutherAI LM Evaluation Harness",
           "url": "https://lm-evaluation-harness.readthedocs.io/"
         },
         {
-          "accessed_at": "2026-05-13T16:21:19Z",
+          "accessed_at": "2026-05-13T17:24:08Z",
           "reason": "Current tool/function-calling benchmark with prompt-mode support for non-native tool models.",
           "title": "Berkeley Function Calling Leaderboard V4",
           "url": "https://gorilla.cs.berkeley.edu/leaderboard"
         },
         {
-          "accessed_at": "2026-05-13T16:21:19Z",
+          "accessed_at": "2026-05-13T17:24:08Z",
           "reason": "Practical code-generation benchmark with an official hard split for deeper coding evidence.",
           "title": "BigCodeBench",
           "url": "https://github.com/bigcode-project/bigcodebench"
         },
         {
-          "accessed_at": "2026-05-13T16:21:19Z",
+          "accessed_at": "2026-05-13T17:24:08Z",
           "reason": "Primary long-context capability benchmark for realistic reasoning across documents, dialogue, code repos, and structured data.",
           "title": "LongBench v2",
           "url": "https://longbench2.github.io/"
         },
         {
-          "accessed_at": "2026-05-13T16:21:19Z",
+          "accessed_at": "2026-05-13T17:24:08Z",
           "reason": "Repeatable diagnostic benchmark for effective context length, context tapering, retrieval, tracing, aggregation, and QA.",
           "title": "NVIDIA RULER",
           "url": "https://github.com/NVIDIA/RULER"

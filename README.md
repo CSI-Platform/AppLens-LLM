@@ -84,10 +84,16 @@ Generated benchmark output is ignored under `out/`.
 
 The first two suites are:
 
-- `tiny-v1` for models at or below 4.5B parameters: `IFEval`, `ARC-Challenge`, `HellaSwag`, `GSM8K`, `BFCL` prompt mode, `BigCodeBench-Hard` screening, `LongBench v2` screening, and `RULER` context taper.
+- `tiny-v1` for models at or below 4.5B parameters: `IFEval`, official `ARC-Challenge Chat`, `HellaSwag`, `GSM8K`, `BFCL` prompt mode, `BigCodeBench-Hard` screening, `LongBench v2` screening, and `RULER` context taper.
 - `small-v1` for models above 4.5B and at or below 30B parameters: Open LLM Leaderboard v2 family (`IFEval`, `BBH`, `MATH Lvl 5`, `GPQA`, `MuSR`, `MMLU-Pro`) plus `BFCL V4`, `BigCodeBench-Hard`, `LongBench v2`, `RULER`, and optional finalist-only `LiveBench`.
 
 As of the May 13, 2026 review, AppLens-LLM treats `LongBench v2` as the primary long-context capability benchmark because it tests realistic long-context reasoning across documents, dialogue, code repositories, and structured data. `RULER` remains the repeatable diagnostic taper for effective context length. Local screening subsets must be labeled as `local_screening`; only full official settings should be treated as certification or leaderboard-comparable.
+
+Each task declares the LM call shape it requires. Generation tasks can run through OpenAI-compatible chat endpoints, but log-likelihood tasks such as `HellaSwag`, `GPQA`, and `MMLU-Pro` require prompt token logprobs and must be marked unsupported if the runtime cannot provide them. For llama.cpp chat runners that leak `<think>` tags into `message.content`, run the lightweight normalizing proxy before `lm-eval`:
+
+```powershell
+uv run python -m applens_llm.llamacpp_lmeval --listen-port 18081 --upstream-base-url http://127.0.0.1:18080
+```
 
 ```powershell
 uv run applens-llm benchmark-suite-plan --suite-run-id qwen35-4b-vgm16-tiny-v1 --model-id qwen35-4b-q4km --display-name "Qwen3.5 4B Q4_K_M" --family qwen --parameter-size-b 4 --quantization Q4_K_M --model-format gguf --model-path sanitized/models/qwen35-4b-q4km.gguf --chat-template qwen --thinking-mode off --reasoning-mode off --condition-id asus-px13-vgm16-ram16 --condition-label "ASUS PX13 VGM 16GB / RAM 16GB" --os-family windows --ram-gb 32 --vgm-enabled --vgm-dedicated-mb 16384 --system-ram-available-gb 16 --accelerator-id amd-igpu-0 --backend vulkan --device-selector Vulkan0 --context-tokens 16384 --output out/benchmark-suites/qwen35-4b-vgm16/benchmark-suite-run.json

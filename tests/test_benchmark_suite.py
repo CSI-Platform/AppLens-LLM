@@ -27,7 +27,7 @@ def test_builds_tiny_suite_with_real_benchmark_plan() -> None:
     task_ids = {task["task_id"] for task in suite["benchmark_plan"]["tasks"]}
     assert {
         "ifeval",
-        "arc_challenge",
+        "arc_challenge_chat",
         "hellaswag",
         "gsm8k",
         "bfcl_prompt",
@@ -36,6 +36,13 @@ def test_builds_tiny_suite_with_real_benchmark_plan() -> None:
         "ruler_context_taper",
     }.issubset(task_ids)
     assert "mmlu_pro" not in task_ids
+    arc = next(task for task in suite["benchmark_plan"]["tasks"] if task["task_id"] == "arc_challenge_chat")
+    assert arc["required_lm_call"] == "generate_until"
+    assert arc["task_ref"] == "arc_challenge_chat"
+    hellaswag = next(task for task in suite["benchmark_plan"]["tasks"] if task["task_id"] == "hellaswag")
+    assert hellaswag["required_lm_call"] == "loglikelihood"
+    assert "prompt token logprobs" in " ".join(hellaswag["runner_requirements"])
+    assert hellaswag["runner_fallback_policy"] == "mark_unsupported_do_not_substitute_custom_generation"
     assert "generation_tokens_per_second" in suite["benchmark_plan"]["local_metrics"]
     assert "vgm_state" in suite["benchmark_plan"]["comparison_keys"]
 

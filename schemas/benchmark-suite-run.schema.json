@@ -329,6 +329,9 @@
         "runner",
         "task_ref",
         "mode",
+        "required_lm_call",
+        "runner_requirements",
+        "runner_fallback_policy",
         "required_for_suite",
         "scoring",
         "sample_policy",
@@ -348,6 +351,16 @@
           "type": "string",
           "enum": ["zero_shot", "few_shot", "prompt_tool_calling", "execution", "context_taper", "finalist_only"]
         },
+        "required_lm_call": {
+          "type": "string",
+          "enum": ["generate_until", "loglikelihood", "external_execution", "context_diagnostic"]
+        },
+        "runner_requirements": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "runner_fallback_policy": { "type": "string", "minLength": 1 },
         "required_for_suite": { "type": "boolean" },
         "scoring": { "type": "string", "minLength": 1 },
         "sample_policy": { "type": "string", "minLength": 1 },

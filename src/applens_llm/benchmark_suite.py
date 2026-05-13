@@ -232,31 +232,31 @@ def _model_size_class(parameter_size_b: float) -> str:
 def _tiny_tasks(runtime_lane: dict[str, Any]) -> list[dict[str, Any]]:
     context_tokens = int(runtime_lane["context_tokens"])
     return [
-        _task("ifeval", "IFEval", "instruction_following", "lm-evaluation-harness", "ifeval", "zero_shot", "strict instruction accuracy", "official_subset_for_local_screening", 0, True),
-        _task("arc_challenge", "ARC-Challenge", "reasoning", "lm-evaluation-harness", "arc_challenge", "few_shot", "normalized accuracy", "official_subset_for_local_screening", 0, True),
-        _task("hellaswag", "HellaSwag", "reasoning", "lm-evaluation-harness", "hellaswag", "few_shot", "normalized accuracy", "official_subset_for_local_screening", 0, True),
-        _task("gsm8k", "GSM8K", "math", "lm-evaluation-harness", "gsm8k", "few_shot", "exact-match extracted answer", "official_subset_for_local_screening", 0, True),
-        _task("bfcl_prompt", "BFCL V4", "tool_calling", "bfcl-eval", "prompt-mode", "prompt_tool_calling", "tool-call accuracy", "prompt_mode_for_non_native_tool_models", 0, True),
-        _task("bigcodebench_hard_screening", "BigCodeBench-Hard", "coding", "bigcodebench", "hard-instruct", "execution", "pass@1 with executable tests", "screening_subset", 0, True),
-        _task("longbench_v2_screening", "LongBench v2", "long_context", "longbench-v2", "short-medium-mcqa", "zero_shot", "multiple-choice accuracy", "screening_subset_under_local_time_budget", context_tokens, True),
-        _task("ruler_context_taper", "RULER", "long_context", "ruler", "niah+aggregation+taper", "context_taper", "effective context score", "diagnostic_taper_at_configured_context_tiers", context_tokens, True),
+        _task("ifeval", "IFEval", "instruction_following", "lm-evaluation-harness", "ifeval", "zero_shot", "generate_until", ["chat/completions returns non-empty message.content", "thinking output disabled or stripped before scoring"], "mark_failed_if_empty_content", "strict instruction accuracy", "official_subset_for_local_screening", 0, True),
+        _task("arc_challenge_chat", "ARC-Challenge Chat", "reasoning", "lm-evaluation-harness", "arc_challenge_chat", "zero_shot", "generate_until", ["chat/completions returns final answer text", "thinking tags stripped before exact-match scoring"], "mark_failed_if_reasoning_tags_remain", "exact-match answer-letter accuracy", "official_subset_for_local_screening", 0, True),
+        _task("hellaswag", "HellaSwag", "reasoning", "lm-evaluation-harness", "hellaswag", "few_shot", "loglikelihood", ["prompt token logprobs for continuation scoring", "tokenizer-compatible context length accounting"], "mark_unsupported_do_not_substitute_custom_generation", "normalized accuracy", "official_subset_for_local_screening", 0, True),
+        _task("gsm8k", "GSM8K", "math", "lm-evaluation-harness", "gsm8k", "few_shot", "generate_until", ["chat/completions returns extractable final answer", "thinking output disabled or stripped before scoring"], "mark_failed_if_no_extractable_answer", "exact-match extracted answer", "official_subset_for_local_screening", 0, True),
+        _task("bfcl_prompt", "BFCL V4", "tool_calling", "bfcl-eval", "prompt-mode", "prompt_tool_calling", "external_execution", ["BFCL prompt-mode runner available", "OpenAI-compatible generation endpoint"], "mark_unsupported_if_runner_unavailable", "tool-call accuracy", "prompt_mode_for_non_native_tool_models", 0, True),
+        _task("bigcodebench_hard_screening", "BigCodeBench-Hard", "coding", "bigcodebench", "hard-instruct", "execution", "external_execution", ["BigCodeBench runner available", "sandboxed code execution configured"], "mark_unsupported_if_execution_sandbox_unavailable", "pass@1 with executable tests", "screening_subset", 0, True),
+        _task("longbench_v2_screening", "LongBench v2", "long_context", "longbench-v2", "short-medium-mcqa", "zero_shot", "generate_until", ["LongBench v2 data available", "configured context fits runtime lane"], "mark_failed_if_context_truncates_unexpectedly", "multiple-choice accuracy", "screening_subset_under_local_time_budget", context_tokens, True),
+        _task("ruler_context_taper", "RULER", "long_context", "ruler", "niah+aggregation+taper", "context_taper", "context_diagnostic", ["RULER repo available", "configured context tiers fit runtime lane"], "mark_failed_if_context_tier_ooms", "effective context score", "diagnostic_taper_at_configured_context_tiers", context_tokens, True),
     ]
 
 
 def _small_tasks(runtime_lane: dict[str, Any]) -> list[dict[str, Any]]:
     context_tokens = int(runtime_lane["context_tokens"])
     return [
-        _task("ifeval", "IFEval", "instruction_following", "lm-evaluation-harness", "ifeval", "zero_shot", "strict instruction accuracy", "official_settings_for_certification_or_subset_for_screening", 0, True),
-        _task("bbh", "BBH", "reasoning", "lm-evaluation-harness", "bbh", "few_shot", "objective task accuracy", "official_settings_for_certification_or_subset_for_screening", 0, True),
-        _task("math_level_5", "MATH Lvl 5", "math", "lm-evaluation-harness", "math_level5", "few_shot", "exact-match formatted answer", "official_settings_for_certification_or_subset_for_screening", 0, True),
-        _task("gpqa", "GPQA", "reasoning", "lm-evaluation-harness", "gpqa", "zero_shot", "multiple-choice accuracy", "official_settings_for_certification_or_subset_for_screening", 0, True),
-        _task("musr", "MuSR", "reasoning", "lm-evaluation-harness", "musr", "zero_shot", "multiple-choice accuracy", "official_settings_for_certification_or_subset_for_screening", 0, True),
-        _task("mmlu_pro", "MMLU-Pro", "reasoning", "lm-evaluation-harness", "mmlu_pro", "few_shot", "10-choice accuracy", "official_settings_for_certification_or_subset_for_screening", 0, True),
-        _task("bfcl_v4", "BFCL V4", "tool_calling", "bfcl-eval", "prompt-or-native", "prompt_tool_calling", "overall function-call accuracy", "prompt_mode_unless_native_tool_calling_is_available", 0, True),
-        _task("bigcodebench_hard", "BigCodeBench-Hard", "coding", "bigcodebench", "hard-instruct", "execution", "pass@1 with executable tests", "screening_subset_then_full_hard_split_for_finalists", 0, True),
-        _task("longbench_v2_screening", "LongBench v2", "long_context", "longbench-v2", "short-medium-long-mcqa", "zero_shot", "multiple-choice accuracy", "screening_subset_under_local_time_budget", context_tokens, True),
-        _task("ruler_context_taper", "RULER", "long_context", "ruler", "niah+aggregation+taper", "context_taper", "effective context score", "diagnostic_taper_at_configured_context_tiers", context_tokens, True),
-        _task("livebench_finalist", "LiveBench", "reasoning", "livebench", "public-release-subset", "finalist_only", "objective task accuracy", "finalists_only", 0, False),
+        _task("ifeval", "IFEval", "instruction_following", "lm-evaluation-harness", "ifeval", "zero_shot", "generate_until", ["chat/completions returns non-empty message.content", "thinking output disabled or stripped before scoring"], "mark_failed_if_empty_content", "strict instruction accuracy", "official_settings_for_certification_or_subset_for_screening", 0, True),
+        _task("bbh", "BBH", "reasoning", "lm-evaluation-harness", "bbh", "few_shot", "generate_until", ["chat/completions returns extractable final answer", "thinking output disabled or stripped before scoring"], "mark_failed_if_no_extractable_answer", "objective task accuracy", "official_settings_for_certification_or_subset_for_screening", 0, True),
+        _task("math_level_5", "MATH Lvl 5", "math", "lm-evaluation-harness", "math_level5", "few_shot", "generate_until", ["chat/completions returns extractable final answer", "thinking output disabled or stripped before scoring"], "mark_failed_if_no_extractable_answer", "exact-match formatted answer", "official_settings_for_certification_or_subset_for_screening", 0, True),
+        _task("gpqa", "GPQA", "reasoning", "lm-evaluation-harness", "gpqa", "zero_shot", "loglikelihood", ["prompt token logprobs for multiple-choice scoring", "tokenizer-compatible context length accounting"], "mark_unsupported_do_not_substitute_custom_generation", "multiple-choice accuracy", "official_settings_for_certification_or_subset_for_screening", 0, True),
+        _task("musr", "MuSR", "reasoning", "lm-evaluation-harness", "musr", "zero_shot", "generate_until", ["chat/completions returns extractable final answer", "thinking output disabled or stripped before scoring"], "mark_failed_if_no_extractable_answer", "multiple-choice accuracy", "official_settings_for_certification_or_subset_for_screening", 0, True),
+        _task("mmlu_pro", "MMLU-Pro", "reasoning", "lm-evaluation-harness", "mmlu_pro", "few_shot", "loglikelihood", ["prompt token logprobs for 10-choice scoring", "tokenizer-compatible context length accounting"], "mark_unsupported_do_not_substitute_custom_generation", "10-choice accuracy", "official_settings_for_certification_or_subset_for_screening", 0, True),
+        _task("bfcl_v4", "BFCL V4", "tool_calling", "bfcl-eval", "prompt-or-native", "prompt_tool_calling", "external_execution", ["BFCL runner available", "prompt mode or native tool calling configured"], "mark_unsupported_if_runner_unavailable", "overall function-call accuracy", "prompt_mode_unless_native_tool_calling_is_available", 0, True),
+        _task("bigcodebench_hard", "BigCodeBench-Hard", "coding", "bigcodebench", "hard-instruct", "execution", "external_execution", ["BigCodeBench runner available", "sandboxed code execution configured"], "mark_unsupported_if_execution_sandbox_unavailable", "pass@1 with executable tests", "screening_subset_then_full_hard_split_for_finalists", 0, True),
+        _task("longbench_v2_screening", "LongBench v2", "long_context", "longbench-v2", "short-medium-long-mcqa", "zero_shot", "generate_until", ["LongBench v2 data available", "configured context fits runtime lane"], "mark_failed_if_context_truncates_unexpectedly", "multiple-choice accuracy", "screening_subset_under_local_time_budget", context_tokens, True),
+        _task("ruler_context_taper", "RULER", "long_context", "ruler", "niah+aggregation+taper", "context_taper", "context_diagnostic", ["RULER repo available", "configured context tiers fit runtime lane"], "mark_failed_if_context_tier_ooms", "effective context score", "diagnostic_taper_at_configured_context_tiers", context_tokens, True),
+        _task("livebench_finalist", "LiveBench", "reasoning", "livebench", "public-release-subset", "finalist_only", "external_execution", ["LiveBench runner available", "model promoted from local screening"], "skip_unless_finalist", "objective task accuracy", "finalists_only", 0, False),
     ]
 
 
@@ -267,6 +267,9 @@ def _task(
     runner: str,
     task_ref: str,
     mode: str,
+    required_lm_call: str,
+    runner_requirements: list[str],
+    runner_fallback_policy: str,
     scoring: str,
     sample_policy: str,
     context_tokens: int,
@@ -279,6 +282,9 @@ def _task(
         "runner": runner,
         "task_ref": task_ref,
         "mode": mode,
+        "required_lm_call": required_lm_call,
+        "runner_requirements": runner_requirements,
+        "runner_fallback_policy": runner_fallback_policy,
         "required_for_suite": required_for_suite,
         "scoring": scoring,
         "sample_policy": sample_policy,
