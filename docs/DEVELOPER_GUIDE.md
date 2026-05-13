@@ -169,6 +169,16 @@ uv run applens-llm model-fit-html --scorecard out/scorecards/asus-px13-model-sco
 
 The HTML report includes ranking and comparison tables with client-side sorting and filtering. Keep generated HTML under ignored `out/`; commit sanitized JSON examples instead.
 
+## Write A Deployment Plan
+
+Use `deployment-plan` after `model-fit-scorecard` to convert ranking evidence into the outfitting contract:
+
+```powershell
+uv run applens-llm deployment-plan --scorecard out/scorecards/asus-px13-model-scorecard.json --plan-id asus-px13-oracle-outfit --workload-name "Oracle autoresearch" --workload-intent agent_runtime --output out/deployment-plans/asus-px13-oracle-outfit.json
+```
+
+The plan records the cloud/API planner-supervisor as the 100-point reference baseline, then assigns local models to concrete roles such as primary local worker and deep-review worker. It includes llama.cpp runtime profiles, context profiles, preflight actions, AppLens-Tune recommendations, promotion gates, and next drilldowns. A local model should not replace the supervisor until the deployment plan shows the replacement gate passing.
+
 ## Write A Fit Report
 
 Use `fit-report` after a machine profile has at least one benchmark or runtime experiment. It is the supporting machine-level decision summary:

@@ -23,7 +23,9 @@
   "gated_jobs": [
     { "job": "training", "gate": "manifest_required" },
     { "job": "large_download", "gate": "user_approval" },
-    { "job": "service_change", "gate": "unsupported" }
+    { "job": "driver_change", "gate": "unsupported" },
+    { "job": "service_change", "gate": "unsupported" },
+    { "job": "network_exposure", "gate": "unsupported" }
   ],
   "findings": [
     {
@@ -41,6 +43,108 @@
       "verification": "Confirm manifest, output directory, max runtime, and OOM abort behavior before training."
     }
   ],
+  "outfitting": {
+    "supervisor_baseline": {
+      "role": "planner_supervisor",
+      "runtime": "cloud_api",
+      "relative_score": 100,
+      "status": "reference_baseline",
+      "replacement_gate_score": 90
+    },
+    "local_supervisor_candidate": {
+      "model_id": "qwen2.5:7b",
+      "display_name": "qwen2.5:7b",
+      "relative_score": 64,
+      "status": "not_ready",
+      "reason": "Best local planner-supervisor candidate by current fit evidence, but supervisor replacement gates are not proven.",
+      "missing_evidence": [
+        "tool_calling_below_supervisor_gate",
+        "coding_below_supervisor_gate",
+        "handoff_planning_below_supervisor_gate"
+      ]
+    },
+    "assignments": [
+      {
+        "role": "primary_local_worker",
+        "model_id": "qwen2.5:7b",
+        "display_name": "qwen2.5:7b",
+        "lane_id": "fast-nvidia",
+        "backend": "cuda",
+        "accelerator_ids": ["nvidia-dgpu-0"],
+        "fit_score": 82,
+        "confidence": "observed",
+        "status": "assigned",
+        "limits": ["supervisor_replacement_unproven"],
+        "rationale": "Use for fast local summarization, eval sweeps, and worker steps while the cloud/API model remains planner-supervisor."
+      }
+    ],
+    "runtime_profiles": [
+      {
+        "profile_id": "qwen25-7b-fast-nvidia",
+        "model_id": "qwen2.5:7b",
+        "lane_id": "fast-nvidia",
+        "engine": "llama.cpp",
+        "backend": "cuda",
+        "accelerator_ids": ["nvidia-dgpu-0"],
+        "context_tokens": 4096,
+        "gpu_layers": 99,
+        "threads": 8,
+        "host": "127.0.0.1",
+        "port": 8080,
+        "extra_flags": ["--parallel", "1"]
+      }
+    ],
+    "context_profiles": [
+      {
+        "model_id": "qwen2.5:7b",
+        "role": "primary_local_worker",
+        "advertised_context_tokens": 0,
+        "recommended_context_tokens": 4096,
+        "status": "unknown"
+      }
+    ],
+    "preflight_actions": [
+      {
+        "action": "close_competing_llm_apps",
+        "owner": "User",
+        "required": true,
+        "reason": "Free local memory and ports before launching the local worker.",
+        "verification": "Confirm unused local LLM applications and servers are closed."
+      },
+      {
+        "action": "confirm_localhost_binding",
+        "owner": "AppLens-LLM",
+        "required": true,
+        "reason": "Keep local inference private by default.",
+        "verification": "Launch profile host is 127.0.0.1."
+      }
+    ],
+    "tune_recommendations": [
+      {
+        "owner": "AppLens-Tune",
+        "action": "free_memory_before_local_llm",
+        "priority": "High",
+        "rationale": "Close competing LLM apps and background-heavy processes before running fit or eval sweeps.",
+        "requires_restart": false
+      }
+    ],
+    "promotion_gates": [
+      {
+        "gate": "local_supervisor_replacement",
+        "required_score": 90,
+        "current_score": 64,
+        "status": "fail"
+      }
+    ],
+    "next_drilldowns": [
+      {
+        "benchmark": "applens-local-v1-role-drilldown",
+        "target_model_id": "qwen2.5:7b",
+        "purpose": "Prove tool calling, coding, handoff planning, and context behavior before local supervisor promotion.",
+        "success_signal": "Schema-valid tool calls, passing coding checks, stable context tier, and no fallback/OOM."
+      }
+    ]
+  },
   "validation": {
     "requires_benchmark": true,
     "requires_user_approval": true,

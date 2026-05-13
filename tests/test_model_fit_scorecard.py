@@ -20,7 +20,7 @@ def test_build_model_fit_scorecard_ranks_observed_and_candidate_models() -> None
     assert "workload" not in scorecard
     rankings = {row["model_id"]: row for row in scorecard["rankings"]}
 
-    assert rankings["jan-v35-4b-q4"]["fit_score"] >= 80
+    assert rankings["jan-v35-4b-q4"]["fit_score"] >= 75
     assert rankings["jan-v35-4b-q4"]["recommended_role"] == "fast_chat"
     assert rankings["jan-v35-4b-q4"]["best_lane"]["backend"] == "cuda"
     assert rankings["qwen-27b-iq3"]["recommended_role"] == "deep_review"
@@ -70,6 +70,120 @@ def test_build_model_fit_scorecard_uses_benchmark_records_without_experiments() 
     assert top["best_lane"]["accelerator_ids"] == ["nvidia-dgpu-0"]
     assert top["evidence"]["source"] == "benchmark_record"
     assert top["confidence"] == "observed"
+
+
+def test_model_fit_scorecard_uses_capability_records_to_break_throughput_ties() -> None:
+    scorecard = build_model_fit_scorecard(
+        machine_profile=_machine_profile(),
+        model_candidates=[
+            {
+                "model_id": "qwen35-2b-q4km",
+                "display_name": "Qwen3.5 2B Q4_K_M",
+                "family": "qwen",
+                "parameter_size_b": 2,
+                "quantization": "Q4_K_M",
+                "file_size_mb": 1269,
+                "local_status": "local",
+                "preferred_roles": ["fast_chat", "coding"],
+                "quality_prior": "medium",
+                "observed_model_label": "qwen35-2b-q4km",
+            },
+            {
+                "model_id": "qwen35-4b-q4km",
+                "display_name": "Qwen3.5 4B Q4_K_M",
+                "family": "qwen",
+                "parameter_size_b": 4,
+                "quantization": "Q4_K_M",
+                "file_size_mb": 2734,
+                "local_status": "local",
+                "preferred_roles": ["fast_chat", "coding"],
+                "quality_prior": "medium",
+                "observed_model_label": "qwen35-4b-q4km",
+            },
+        ],
+        benchmark_records=[
+            _benchmark_record(model_name="qwen35-2b-q4km"),
+            _benchmark_record(model_name="qwen35-4b-q4km"),
+        ],
+        capability_records=[
+            _capability_record("qwen35-2b-q4km", score_pct=62),
+            _capability_record("qwen35-4b-q4km", score_pct=94, thinking_mode="off"),
+        ],
+        created_at="2026-05-12T17:00:00Z",
+        scorecard_id="scorecard-capability",
+    )
+
+    validate_payload("model-fit-scorecard", scorecard)
+    rankings = {row["model_id"]: row for row in scorecard["rankings"]}
+    assert scorecard["rankings"][0]["model_id"] == "qwen35-4b-q4km"
+    assert rankings["qwen35-4b-q4km"]["score_breakdown"]["agent_capability"] > rankings["qwen35-2b-q4km"]["score_breakdown"]["agent_capability"]
+    assert rankings["qwen35-4b-q4km"]["evidence"]["capability_score_pct"] == 94
+    assert rankings["qwen35-4b-q4km"]["evidence"]["thinking_modes"] == ["off"]
+
+
+def test_model_fit_scorecard_includes_context_envelope_evidence() -> None:
+    scorecard = build_model_fit_scorecard(
+        machine_profile=_machine_profile(),
+        model_candidates=[
+            {
+                "model_id": "qwen35-27b-iq3",
+                "display_name": "Qwen3.5 27B IQ3",
+                "family": "qwen",
+                "parameter_size_b": 27,
+                "quantization": "IQ3_M",
+                "file_size_mb": 12001,
+                "local_status": "local",
+                "preferred_roles": ["deep_review"],
+                "quality_prior": "high",
+                "observed_model_label": "qwen35-27b-iq3",
+            }
+        ],
+        benchmark_records=[_benchmark_record(model_name="qwen35-27b-iq3")],
+        context_envelopes=[_context_envelope()],
+        created_at="2026-05-12T18:00:00Z",
+        scorecard_id="scorecard-context",
+    )
+
+    row = scorecard["rankings"][0]
+    assert row["evidence"]["advertised_context_tokens"] == 262144
+    assert row["evidence"]["max_tested_context_tokens"] == 65536
+    assert row["evidence"]["recommended_context_tokens"] == 65536
+    assert row["evidence"]["context_score_pct"] == 76
+    assert row["evidence"]["context_evidence_status"] == "observed_useful"
+    assert row["score_breakdown"]["context_evidence"] > 0
+
+
+def test_model_fit_scorecard_marks_untested_context_as_unproven_not_bad_performance() -> None:
+    scorecard = build_model_fit_scorecard(
+        machine_profile=_machine_profile(),
+        model_candidates=[
+            {
+                "model_id": "qwen35-27b-iq3",
+                "display_name": "Qwen3.5 27B IQ3",
+                "family": "qwen",
+                "parameter_size_b": 27,
+                "quantization": "IQ3_M",
+                "file_size_mb": 12001,
+                "local_status": "local",
+                "preferred_roles": ["deep_review"],
+                "quality_prior": "high",
+                "observed_model_label": "qwen35-27b-iq3",
+            }
+        ],
+        benchmark_records=[_benchmark_record(model_name="qwen35-27b-iq3")],
+        context_envelopes=[_unproven_context_envelope()],
+        created_at="2026-05-12T18:00:00Z",
+        scorecard_id="scorecard-context-unproven",
+    )
+
+    row = scorecard["rankings"][0]
+    assert "context_fit" not in row["score_breakdown"]
+    assert row["score_breakdown"]["context_evidence"] == 0
+    assert row["evidence"]["context_evidence_status"] == "advertised_unproven"
+    assert row["evidence"]["recommended_context_tokens"] == 0
+    assert "not a performance finding" in row["evidence"]["context_interpretation"]
+    assert any("Advertised context is unproven locally" in reason for reason in row["reasons"])
+    assert all("Recommended context is 0" not in reason for reason in row["reasons"])
 
 
 def test_failed_benchmark_record_is_not_ranked_as_ready() -> None:
@@ -248,6 +362,139 @@ def _benchmark_record(model_name: str = "qwen2.5:7b", status: str = "pass") -> d
             "notes": "Sanitized benchmark record.",
         },
     }
+
+
+def _capability_record(model_id: str, *, score_pct: int, thinking_mode: str = "unknown") -> dict:
+    return {
+        "schema_version": "0.1",
+        "run_id": f"cap-{model_id}",
+        "created_at": "2026-05-12T17:00:00Z",
+        "benchmark": {
+            "id": "applens-local-v1",
+            "version": "0.1",
+            "inspirations": ["BFCL", "LiveCodeBench", "IFEval", "lm-evaluation-harness"],
+        },
+        "model": {
+            "model_id": model_id,
+            "display_name": model_id,
+            "family": "qwen",
+            "parameter_size_b": 4,
+            "quantization": "Q4_K_M",
+            "thinking_mode": thinking_mode,
+        },
+        "runtime": {
+            "engine": "llama.cpp",
+            "backend": "vulkan",
+            "devices_used": ["nvidia-dgpu-0"],
+        },
+        "thinking": {
+            "requested": thinking_mode,
+            "observed_thinking_trace": False,
+            "notes": "Unit-test capability record.",
+        },
+        "scores": {
+            "total_points": score_pct,
+            "max_points": 100,
+            "score_pct": score_pct,
+            "category_scores": {
+                "tool_calling": {"points": score_pct, "max_points": 100, "score_pct": score_pct},
+                "coding": {"points": score_pct, "max_points": 100, "score_pct": score_pct},
+            },
+        },
+        "cases": [
+            {
+                "case_id": "unit",
+                "category": "tool_calling",
+                "status": "pass",
+                "points": score_pct,
+                "max_points": 100,
+                "issues": [],
+                "checks": [{"name": "unit", "passed": True, "points": score_pct, "max_points": 100}],
+                "response_excerpt": "{}",
+            }
+        ],
+        "outcome": {
+            "status": "pass",
+            "band": "agent_ready" if score_pct >= 90 else "limited",
+            "notes": "Synthetic capability record.",
+        },
+        "privacy": {"commit_safe": True, "local_paths_included": False},
+    }
+
+
+def _context_envelope() -> dict:
+    return {
+        "schema_version": "0.1",
+        "envelope_id": "ctx-unit",
+        "created_at": "2026-05-12T18:00:00Z",
+        "machine": {"machine_id": "asus-laptop", "label": "ASUS ProArt PX13"},
+        "models": [
+            {
+                "model_id": "qwen35-27b-iq3",
+                "display_name": "Qwen3.5 27B IQ3",
+                "advertised_context_tokens": 262144,
+                "advertised_context": {
+                    "tokens": 262144,
+                    "source": "https://artificialanalysis.ai/leaderboards/models?size=small",
+                    "confidence": "advertised",
+                },
+                "planned_context_tiers": [262144, 131072, 65536, 32768, 16384, 8192, 4096],
+                "max_tested_context_tokens": 65536,
+                "max_loadable_context_tokens": 65536,
+                "max_stable_context_tokens": 65536,
+                "max_useful_context_tokens": 65536,
+                "max_recommended_context_tokens": 65536,
+                "context_score_pct": 76,
+                "context_evidence_status": "observed_useful",
+                "context_interpretation": "Observed useful context at 65536 tokens.",
+                "status": "observed_context",
+                "blockers": [],
+                "observations": [
+                    {
+                        "context_tokens": 65536,
+                        "backend": "vulkan",
+                        "devices_used": ["amd-igpu-0"],
+                        "status": "pass",
+                        "quality_score_pct": 76,
+                        "generation_tokens_per_second": 5.4,
+                        "prompt_tokens_per_second": 51,
+                        "failure_modes": ["none"],
+                        "workloads": ["long_context_retrieval"],
+                        "notes": "Unit context observation.",
+                    }
+                ],
+                "workload_recommendations": {
+                    "long_context_retrieval": {
+                        "context_tokens": 65536,
+                        "quality_score_pct": 76,
+                        "generation_tokens_per_second": 5.4,
+                        "reason": "largest_stable_context",
+                    }
+                },
+            }
+        ],
+        "comparisons": [],
+        "next_actions": ["Run context taper benchmarks."],
+        "privacy": {"commit_safe": True, "local_paths_included": False},
+    }
+
+
+def _unproven_context_envelope() -> dict:
+    envelope = _context_envelope()
+    model = envelope["models"][0]
+    model["max_tested_context_tokens"] = 0
+    model["max_loadable_context_tokens"] = 0
+    model["max_stable_context_tokens"] = 0
+    model["max_useful_context_tokens"] = 0
+    model["max_recommended_context_tokens"] = 0
+    model["context_score_pct"] = 0
+    model["context_evidence_status"] = "advertised_unproven"
+    model["context_interpretation"] = "Advertised context is unproven locally; this is not a performance finding."
+    model["status"] = "needs_context_benchmark"
+    model["blockers"] = ["advertised_context_unproven"]
+    model["observations"] = []
+    model["workload_recommendations"] = {}
+    return envelope
 
 
 def _machine_profile() -> dict:

@@ -2,6 +2,7 @@
   "created_at": "2026-05-10T00:00:00Z",
   "evidence": {
     "benchmark_record_count": 0,
+    "capability_record_count": 0,
     "candidate_model_count": 3,
     "experiment_summary_count": 5
   },
@@ -17,6 +18,7 @@
   },
   "next_actions": [
     "Benchmark the top unobserved candidate before making it the default.",
+    "Run applens-local-v1 on top candidates before using them for agentic local work.",
     "Keep AMD VGM/Vulkan checks in the readiness loop for capacity-lane models.",
     "Use repeated benchmark evidence before changing default model rankings."
   ],
@@ -41,11 +43,19 @@
       "evidence": {
         "avg_latency_ms": 2166.0,
         "avg_total_tokens": 133.0,
+        "capability_record_count": 0,
+        "advertised_context_tokens": 0,
+        "context_score_pct": 0,
+        "context_evidence_status": "advertised_unproven",
+        "context_interpretation": "Advertised context is unproven locally; this is not a performance finding.",
+        "max_tested_context_tokens": 0,
         "observation_count": 5,
-        "source": "experiment_summary"
+        "recommended_context_tokens": 0,
+        "source": "experiment_summary",
+        "thinking_modes": []
       },
       "family": "qwen",
-      "fit_score": 98,
+      "fit_score": 79,
       "local_status": "local",
       "model_id": "jan-v35-4b-q4",
       "next_benchmark": "Run task-specific quality checks for the intended role.",
@@ -57,18 +67,21 @@
         "Best lane is fast-nvidia on cuda.",
         "5 observed run(s) are available for this model label.",
         "Capacity fit is strong for the selected lane.",
-        "Latency evidence is suitable for the recommended role."
+        "Latency evidence is suitable for the recommended role.",
+        "Agent capability is unproven until applens-local-v1 is run."
       ],
       "recommended_role": "fast_chat",
-      "score_band": "excellent",
+      "score_band": "usable",
       "score_breakdown": {
-        "capacity_fit": 25,
+        "agent_capability": 8,
+        "capacity_fit": 18,
+        "context_evidence": 0,
         "evidence_confidence": 5,
         "operational_readiness": 10,
-        "quality_size": 8,
-        "role_fit": 15,
-        "speed_latency": 20,
-        "stability": 15
+        "quality_size": 4,
+        "role_fit": 10,
+        "speed_latency": 13,
+        "stability": 10
       }
     },
     {
@@ -89,11 +102,19 @@
       "evidence": {
         "avg_latency_ms": 21566.6,
         "avg_total_tokens": 273.0,
+        "capability_record_count": 0,
+        "advertised_context_tokens": 0,
+        "context_score_pct": 0,
+        "context_evidence_status": "advertised_unproven",
+        "context_interpretation": "Advertised context is unproven locally; this is not a performance finding.",
+        "max_tested_context_tokens": 0,
         "observation_count": 5,
-        "source": "experiment_summary"
+        "recommended_context_tokens": 0,
+        "source": "experiment_summary",
+        "thinking_modes": []
       },
       "family": "qwen",
-      "fit_score": 89,
+      "fit_score": 73,
       "local_status": "local",
       "model_id": "qwen-27b-iq3",
       "next_benchmark": "Run task-specific quality checks for the intended role.",
@@ -105,18 +126,21 @@
         "Best lane is deep-amd-vgm on vulkan.",
         "5 observed run(s) are available for this model label.",
         "Capacity fit is strong for the selected lane.",
+        "Agent capability is unproven until applens-local-v1 is run.",
         "Quality prior is high for its size class."
       ],
       "recommended_role": "deep_review",
-      "score_band": "good",
+      "score_band": "usable",
       "score_breakdown": {
-        "capacity_fit": 25,
+        "agent_capability": 8,
+        "capacity_fit": 18,
+        "context_evidence": 0,
         "evidence_confidence": 5,
         "operational_readiness": 10,
-        "quality_size": 10,
-        "role_fit": 15,
-        "speed_latency": 9,
-        "stability": 15
+        "quality_size": 5,
+        "role_fit": 10,
+        "speed_latency": 6,
+        "stability": 10
       }
     },
     {
@@ -136,11 +160,19 @@
       "confidence": "inferred",
       "display_name": "Gemma E4B Q4",
       "evidence": {
+        "advertised_context_tokens": 0,
+        "capability_record_count": 0,
+        "context_score_pct": 0,
+        "context_evidence_status": "advertised_unproven",
+        "context_interpretation": "Advertised context is unproven locally; this is not a performance finding.",
+        "max_tested_context_tokens": 0,
         "observation_count": 0,
-        "source": "inferred_from_inventory"
+        "recommended_context_tokens": 0,
+        "source": "inferred_from_inventory",
+        "thinking_modes": []
       },
       "family": "gemma",
-      "fit_score": 76,
+      "fit_score": 62,
       "local_status": "candidate",
       "model_id": "gemma-e4b-q4",
       "next_benchmark": "Run a direct fast chat benchmark on fast-nvidia.",
@@ -152,30 +184,35 @@
         "Best lane is fast-nvidia on cuda.",
         "Score is inferred until this model has a direct benchmark.",
         "Capacity fit is strong for the selected lane.",
+        "Agent capability is unproven until applens-local-v1 is run.",
         "Quality prior is high for its size class."
       ],
       "recommended_role": "fast_chat",
-      "score_band": "usable",
+      "score_band": "experimental",
       "score_breakdown": {
-        "capacity_fit": 23,
+        "agent_capability": 8,
+        "capacity_fit": 18,
+        "context_evidence": 0,
         "evidence_confidence": 2,
         "operational_readiness": 6,
-        "quality_size": 10,
-        "role_fit": 15,
-        "speed_latency": 13,
-        "stability": 7
+        "quality_size": 5,
+        "role_fit": 10,
+        "speed_latency": 9,
+        "stability": 5
       }
     }
   ],
   "schema_version": "0.1",
   "scorecard_id": "asus-px13-model-scorecard-example",
   "scoring_weights": {
-    "capacity_fit": 25,
+    "agent_capability": 24,
+    "capacity_fit": 18,
+    "context_evidence": 5,
     "evidence_confidence": 5,
     "operational_readiness": 10,
-    "quality_size": 10,
-    "role_fit": 15,
-    "speed_latency": 20,
-    "stability": 15
+    "quality_size": 5,
+    "role_fit": 10,
+    "speed_latency": 13,
+    "stability": 10
   }
 }

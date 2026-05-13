@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from applens_llm.schemas import validate_payload
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -481,6 +483,216 @@ def test_cli_model_fit_scorecard_writes_scorecard(tmp_path: Path) -> None:
     assert payload["workload"]["workload_id"] == "oracle"
 
 
+def test_cli_deployment_plan_writes_outfitting_plan(tmp_path: Path) -> None:
+    scorecard = tmp_path / "scorecard.json"
+    output = tmp_path / "deployment-plan.json"
+    scorecard.write_text(json.dumps(_scorecard_payload()), encoding="utf-8")
+
+    result = run_cli(
+        "deployment-plan",
+        "--scorecard",
+        str(scorecard),
+        "--plan-id",
+        "asus-px13-outfit",
+        "--workload-name",
+        "Oracle autoresearch",
+        "--workload-intent",
+        "agent_runtime",
+        "--output",
+        str(output),
+    )
+
+    assert result.returncode == 0
+    assert "deployment plan" in result.stdout
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    validate_payload("deployment-plan", payload)
+    assert payload["outfitting"]["supervisor_baseline"]["runtime"] == "cloud_api"
+    assert payload["outfitting"]["assignments"][0]["role"] == "primary_local_worker"
+
+
+def test_cli_local_capability_eval_scores_response_file(tmp_path: Path) -> None:
+    responses = tmp_path / "responses.json"
+    output = tmp_path / "capability.json"
+    responses.write_text(
+        json.dumps(
+            {
+                "model": {"model_id": "qwen35-4b-q4km", "display_name": "Qwen3.5 4B", "quantization": "Q4_K_M"},
+                "runtime": {"engine": "llama.cpp", "backend": "vulkan", "devices_used": ["nvidia-dgpu-0"]},
+                "responses": {
+                    "strict_json_summary": '{"recommendation":"benchmark_required","confidence":"observed","evidence_required":["benchmark-record"]}',
+                    "tool_select_model_lane": '{"tool_call":{"name":"select_model_lane","arguments":{"model_id":"qwen35-4b-q4km","lane_id":"fast-nvidia","reason":"observed fast lane"}}}',
+                    "tool_noop_for_memory_claim": '{"tool_call":null,"answer":"No tool yet; benchmark the 22GB pooled VRAM claim first."}',
+                    "hardware_memory_reasoning": '{"verdict":"claim_requires_benchmark","unsupported_claims":["22GB pooled VRAM"],"required_evidence":["devices_used"],"notes":"not one clean pooled device"}',
+                    "benchmark_interpretation": '{"best_fast_model":"qwen35-4b-q4km","best_deep_model":"gemma4-26b-a4b-q3km","next_test":"capability eval","reason":"role evidence"}',
+                    "coding_unit_task": '{"language":"python","files":[{"path":"score_fit.py","content":"def score_fit(rows):\\n    return round(sum(row[\\\"score\\\"] for row in rows) / len(rows)) if rows else 0\\n"}]}',
+                    "safety_boundary": '{"allowed_actions":["write_scorecard"],"blocked_actions":["driver_change","firewall_change","delete_user_files"],"requires_user_approval":["downloads"]}',
+                    "handoff_planning": '{"planner_model":"gemma4-26b-a4b-q3km","executor_model":"qwen35-2b-q4km","handoff_packet":{"objective":"summarize","steps":["read","write"],"success_check":"schema valid"}}',
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(
+        "local-capability-eval",
+        "--responses",
+        str(responses),
+        "--output",
+        str(output),
+        "--thinking-mode",
+        "off",
+        "--execute-code-checks",
+    )
+
+    assert result.returncode == 0
+    assert "local capability eval" in result.stdout
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["benchmark"]["id"] == "applens-local-v1"
+    assert payload["model"]["thinking_mode"] == "off"
+
+
+def test_cli_context_envelope_writes_context_taper_report(tmp_path: Path) -> None:
+    machine = tmp_path / "machine.json"
+    candidates = tmp_path / "models.json"
+    observations = tmp_path / "context-observations.jsonl"
+    output = tmp_path / "context-envelope.json"
+    machine.write_text(json.dumps(_fit_machine_profile()), encoding="utf-8")
+    candidates.write_text(
+        json.dumps(
+            {
+                "models": [
+                    {
+                        "model_id": "qwen35-27b-iq3",
+                        "display_name": "Qwen3.5 27B IQ3",
+                        "family": "qwen",
+                        "parameter_size_b": 27,
+                        "quantization": "IQ3_M",
+                        "local_status": "local",
+                        "preferred_roles": ["deep_review"],
+                        "quality_prior": "high",
+                        "advertised_context_tokens": 262144,
+                        "advertised_context_source": "https://artificialanalysis.ai/leaderboards/models?size=small",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    observations.write_text(
+        json.dumps(
+            {
+                "model_id": "qwen35-27b-iq3",
+                "context_tokens": 65536,
+                "backend": "vulkan",
+                "devices_used": ["amd-igpu-0"],
+                "status": "pass",
+                "quality_score_pct": 78,
+                "generation_tokens_per_second": 5.2,
+                "prompt_tokens_per_second": 51,
+                "failure_modes": ["none"],
+                "workloads": ["long_context_retrieval"],
+                "notes": "Sanitized CLI observation.",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = run_cli(
+        "context-envelope",
+        "--machine-profile",
+        str(machine),
+        "--machine-id",
+        "asus-laptop",
+        "--model-candidates",
+        str(candidates),
+        "--context-observation",
+        str(observations),
+        "--output",
+        str(output),
+    )
+
+    assert result.returncode == 0
+    assert "context envelope" in result.stdout
+    assert "context_evidence_models=1" in result.stdout
+    assert "useful_context_models=1" in result.stdout
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["models"][0]["max_recommended_context_tokens"] == 65536
+
+
+def test_cli_context_quality_probe_scores_response_file(tmp_path: Path) -> None:
+    response = tmp_path / "response.txt"
+    output = tmp_path / "context-quality.json"
+    observation = tmp_path / "context-quality.jsonl"
+    response.write_text(
+        json.dumps(
+            {
+                "needle": "APPLENS-CTX-8192-TEST",
+                "context_tier": 8192,
+                "memory_claim_verdict": "benchmark_required_not_pooled",
+                "code": (
+                    "def choose_context_tier(rows):\n"
+                    "    usable = [row for row in rows if row.get('status') == 'pass' "
+                    "and row.get('quality_score_pct', 0) >= 60 "
+                    "and row.get('generation_tokens_per_second', 0) >= 1]\n"
+                    "    return max((row.get('context_tokens', 0) for row in usable), default=0)\n"
+                ),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(
+        "context-quality-probe",
+        "--response-file",
+        str(response),
+        "--model-id",
+        "qwen35-2b-q4km",
+        "--display-name",
+        "Qwen3.5 2B Q4_K_M",
+        "--family",
+        "qwen",
+        "--parameter-size-b",
+        "2",
+        "--quantization",
+        "Q4_K_M",
+        "--backend",
+        "vulkan",
+        "--device-selector",
+        "Vulkan1",
+        "--accelerator-id",
+        "nvidia-dgpu-0",
+        "--context-tokens",
+        "8192",
+        "--prompt-token-budget",
+        "6000",
+        "--expected-needle",
+        "APPLENS-CTX-8192-TEST",
+        "--elapsed-seconds",
+        "8",
+        "--prompt-tokens-per-second",
+        "100",
+        "--generation-tokens-per-second",
+        "42",
+        "--execute-code-checks",
+        "--output",
+        str(output),
+        "--context-observation-output",
+        str(observation),
+    )
+
+    assert result.returncode == 0
+    assert "context quality" in result.stdout
+    assert "score=" in result.stdout
+    assert output.exists()
+    assert observation.exists()
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["outcome"]["status"] == "pass"
+    observation_payload = json.loads(observation.read_text(encoding="utf-8"))
+    assert observation_payload["status"] == "pass"
+    assert observation_payload["generation_tokens_per_second"] == 42
+
+
 def test_cli_model_fit_html_writes_sortable_report(tmp_path: Path) -> None:
     scorecard = tmp_path / "scorecard.json"
     comparison = tmp_path / "comparison.json"
@@ -682,13 +894,15 @@ def _scorecard_payload() -> dict[str, object]:
             },
         },
         "scoring_weights": {
-            "capacity_fit": 25,
-            "speed_latency": 20,
-            "stability": 15,
-            "role_fit": 15,
-            "quality_size": 10,
+            "capacity_fit": 18,
+            "speed_latency": 13,
+            "stability": 10,
+            "role_fit": 10,
+            "quality_size": 5,
             "operational_readiness": 10,
             "evidence_confidence": 5,
+            "agent_capability": 24,
+            "context_evidence": 5,
         },
         "rankings": [
             {
@@ -710,13 +924,15 @@ def _scorecard_payload() -> dict[str, object]:
                 "fit_score": 98,
                 "score_band": "excellent",
                 "score_breakdown": {
-                    "capacity_fit": 25,
-                    "speed_latency": 20,
-                    "stability": 15,
-                    "role_fit": 15,
-                    "quality_size": 8,
+                    "capacity_fit": 18,
+                    "speed_latency": 13,
+                    "stability": 10,
+                    "role_fit": 10,
+                    "quality_size": 4,
                     "operational_readiness": 10,
                     "evidence_confidence": 5,
+                    "agent_capability": 24,
+                    "context_evidence": 0,
                 },
                 "confidence": "observed",
                 "reasons": ["Observed fast CUDA lane."],
@@ -724,6 +940,16 @@ def _scorecard_payload() -> dict[str, object]:
                 "evidence": {
                     "source": "experiment_summary",
                     "observation_count": 5,
+                    "capability_record_count": 1,
+                    "advertised_context_tokens": 0,
+                    "max_tested_context_tokens": 0,
+                    "recommended_context_tokens": 0,
+                    "context_score_pct": 0,
+                    "context_evidence_status": "advertised_unproven",
+                    "context_interpretation": "Advertised context is unproven locally; this is not a performance finding.",
+                    "capability_score_pct": 96,
+                    "capability_categories": {"tool_calling": 100},
+                    "thinking_modes": ["off"],
                     "avg_latency_ms": 2166.0,
                     "avg_total_tokens": 133.0,
                 },
@@ -733,6 +959,7 @@ def _scorecard_payload() -> dict[str, object]:
         "evidence": {
             "experiment_summary_count": 5,
             "benchmark_record_count": 0,
+            "capability_record_count": 1,
             "candidate_model_count": 1,
         },
         "next_actions": ["Benchmark unobserved candidates."],

@@ -84,8 +84,8 @@ def _summary(scorecard: dict[str, Any]) -> str:
 <section class="metrics">
   {_metric("Top model", top["display_name"], f"{top['fit_score']}/100")}
   {_metric("Observed models", observed, "benchmark-backed")}
-  {_metric("Inferred models", inferred, "needs direct test")}
-  {_metric("Evidence", evidence["experiment_summary_count"], "experiment summaries")}
+  {_metric("Capability records", evidence.get("capability_record_count", 0), "applens-local-v1")}
+  {_metric("Evidence", evidence["benchmark_record_count"], f"{evidence['experiment_summary_count']} experiment summaries")}
 </section>
 """.strip()
 
@@ -114,6 +114,8 @@ def _ranking_table(scorecard: dict[str, Any]) -> str:
             f"<td>{_text(lane['lane_id'])}<small>{_text(lane['backend'])} / {_text(_join(lane.get('accelerator_ids', [])))}</small></td>"
             f"<td>{_text(ranking['confidence'])}<small>{_text(evidence.get('source', 'unknown'))}</small></td>"
             f"<td data-sort-value=\"{evidence.get('avg_latency_ms', 0)}\">{_text(evidence.get('avg_latency_ms', 'n/a'))}</td>"
+            f"<td data-sort-value=\"{evidence.get('capability_score_pct', 0)}\">{_text(evidence.get('capability_score_pct', 'n/a'))}<small>{_text(_join(evidence.get('thinking_modes', []), empty='unknown'))}</small></td>"
+            f"<td data-sort-value=\"{evidence.get('recommended_context_tokens', 0)}\">{_text(_context_label(evidence))}<small>{_text(_context_detail(evidence))}</small></td>"
             f"<td>{_text(_join(ranking.get('blockers', []), empty='none'))}</td>"
             f"<td>{_text(ranking['next_benchmark'])}</td>"
             "</tr>"
@@ -138,6 +140,8 @@ def _ranking_table(scorecard: dict[str, Any]) -> str:
           <th onclick="sortTable(this)">Lane</th>
           <th onclick="sortTable(this)">Confidence</th>
           <th onclick="sortTable(this)">Avg latency ms</th>
+          <th onclick="sortTable(this)">Capability</th>
+          <th onclick="sortTable(this)">Recommended context</th>
           <th onclick="sortTable(this)">Blockers</th>
           <th>Next benchmark</th>
         </tr>
@@ -367,3 +371,29 @@ def _join(values: list[Any], *, empty: str = "unknown") -> str:
 
 def _text(value: Any) -> str:
     return escape(str(value), quote=True)
+
+
+def _format_tokens(value: Any) -> str:
+    if not isinstance(value, (int, float)) or int(value) <= 0:
+        return "n/a"
+    return f"{int(value):,}"
+
+
+def _context_label(evidence: dict[str, Any]) -> str:
+    status = evidence.get("context_evidence_status")
+    if status == "advertised_unproven":
+        return "unproven"
+    if status == "observed_limited":
+        return "quality needed"
+    return _format_tokens(evidence.get("recommended_context_tokens", 0))
+
+
+def _context_detail(evidence: dict[str, Any]) -> str:
+    status = evidence.get("context_evidence_status", "unknown")
+    tested = _format_tokens(evidence.get("max_tested_context_tokens", 0))
+    advertised = _format_tokens(evidence.get("advertised_context_tokens", 0))
+    if status == "advertised_unproven":
+        return f"advertised {advertised}; taper needed"
+    if status == "observed_limited":
+        return f"load-tested {tested}; quality needed"
+    return f"tested {tested} / advertised {advertised}"

@@ -26,6 +26,7 @@ AppLens captures the raw machine and local AI inventory. AppLens-Tune prepares t
 - Add `model-fit-scorecard` as the primary product artifact.
 - Score candidate local models out of 100 by role.
 - Include best backend/device lane, confidence, evidence, reasons, blockers, and next benchmark.
+- Include advertised, tested, and recommended context windows once context-envelope evidence exists.
 - Use concrete weighted scoring:
   - capacity fit
   - speed and latency
@@ -34,18 +35,29 @@ AppLens captures the raw machine and local AI inventory. AppLens-Tune prepares t
   - quality-per-size
   - operational readiness
   - evidence confidence
+  - local agent capability
 - Generate the first ASUS ProArt PX13 scorecard from local model/runtime evidence.
 - Keep generated local scorecards under ignored `out/`; commit only sanitized examples.
+- Generate deployment plans from scorecards so rankings become concrete outfitting instructions: local worker assignments, runtime/context profiles, preflight actions, AppLens-Tune recommendations, and local supervisor replacement gates.
 
 ## Milestone 2: Readiness And Benchmark Loop
 
 - Let AppLens-Tune feed readiness state into scorecards: VGM active, drivers present, ports available, runtime binaries found, thermal/power notes, and restart-required state.
 - Add repeat benchmark runs for top-ranked candidate models.
+- Standardize `applens-local-v1` as the capability eval beside `llama-bench`.
+- Score strict JSON, tool-call emulation, coding, hardware reasoning, benchmark interpretation, safety boundaries, handoff planning, and thinking-mode behavior.
+- Add `context-envelope` tapering from advertised model context down to proven useful local context.
+- Add long-context observations for loadability, stability, throughput, retrieval, summary, coding, and JSON-after-long-context behavior.
 - Attach AMD Software and NVIDIA telemetry summaries where available.
 - Improve confidence scores as repeated evidence accumulates.
 - Keep driver branch/version as evidence, but do not over-weight it without repeated benchmark proof.
 
-## Milestone 3: Fit Report As Supporting Artifact
+## Milestone 3: Deployment Plan And Fit Report
+
+- Keep `deployment-plan` as the scorecard-driven outfitting artifact.
+- Treat the cloud/API planner-supervisor as the 100-point reference baseline until local replacement gates pass.
+- Assign local models as primary worker, deep-review worker, long-context worker, or avoid-primary based on evidence.
+- Emit launch profiles and preflight/Tune guidance without changing drivers, services, downloads, or network exposure automatically.
 
 - Keep `fit-report` as a machine-level decision summary.
 - Embed or reference scorecard rankings from fit reports.

@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://csi-platform.local/applens-llm/context-envelope.schema.json",
+  "title": "AppLens-LLM Context Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "envelope_id",
+    "created_at",
+    "machine",
+    "models",
+    "comparisons",
+    "next_actions",
+    "privacy"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "envelope_id": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "machine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["machine_id", "label"],
+      "properties": {
+        "machine_id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 }
+      }
+    },
+    "models": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/model_context" }
+    },
+    "comparisons": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/comparison" }
+    },
+    "next_actions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit_safe", "local_paths_included"],
+      "properties": {
+        "commit_safe": { "type": "boolean" },
+        "local_paths_included": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "model_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_id",
+        "display_name",
+        "advertised_context_tokens",
+        "advertised_context",
+        "planned_context_tiers",
+        "max_tested_context_tokens",
+        "max_loadable_context_tokens",
+        "max_stable_context_tokens",
+        "max_useful_context_tokens",
+        "max_recommended_context_tokens",
+        "context_score_pct",
+        "context_evidence_status",
+        "context_interpretation",
+        "status",
+        "blockers",
+        "observations",
+        "workload_recommendations"
+      ],
+      "properties": {
+        "model_id": { "type": "string", "minLength": 1 },
+        "display_name": { "type": "string", "minLength": 1 },
+        "advertised_context_tokens": { "type": "integer", "minimum": 0 },
+        "advertised_context": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tokens", "source", "confidence"],
+          "properties": {
+            "tokens": { "type": "integer", "minimum": 0 },
+            "source": { "type": "string" },
+            "confidence": {
+              "type": "string",
+              "enum": ["advertised", "observed", "inferred", "unknown"]
+            }
+          }
+        },
+        "planned_context_tiers": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 },
+          "uniqueItems": true
+        },
+        "max_tested_context_tokens": { "type": "integer", "minimum": 0 },
+        "max_loadable_context_tokens": { "type": "integer", "minimum": 0 },
+        "max_stable_context_tokens": { "type": "integer", "minimum": 0 },
+        "max_useful_context_tokens": { "type": "integer", "minimum": 0 },
+        "max_recommended_context_tokens": { "type": "integer", "minimum": 0 },
+        "context_score_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "context_evidence_status": {
+          "type": "string",
+          "enum": ["advertised_unproven", "observed_useful", "observed_limited", "not_advertised"]
+        },
+        "context_interpretation": { "type": "string", "minLength": 1 },
+        "status": {
+          "type": "string",
+          "enum": ["needs_context_benchmark", "observed_context", "context_limited", "not_recommended"]
+        },
+        "blockers": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "observations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/context_observation" }
+        },
+        "workload_recommendations": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/workload_context_recommendation" }
+        }
+      }
+    },
+    "context_observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "context_tokens",
+        "backend",
+        "devices_used",
+        "status",
+        "quality_score_pct",
+        "generation_tokens_per_second",
+        "prompt_tokens_per_second",
+        "failure_modes",
+        "workloads",
+        "notes"
+      ],
+      "properties": {
+        "context_tokens": { "type": "integer", "minimum": 1 },
+        "backend": { "type": "string", "minLength": 1 },
+        "devices_used": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail", "oom", "timeout", "crash", "fallback"]
+        },
+        "quality_score_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "generation_tokens_per_second": { "type": "number", "minimum": 0 },
+        "prompt_tokens_per_second": { "type": "number", "minimum": 0 },
+        "failure_modes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "workloads": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "notes": { "type": "string" }
+      }
+    },
+    "workload_context_recommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["context_tokens", "quality_score_pct", "generation_tokens_per_second", "reason"],
+      "properties": {
+        "context_tokens": { "type": "integer", "minimum": 0 },
+        "quality_score_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "generation_tokens_per_second": { "type": "number", "minimum": 0 },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workload", "winner_model_id", "context_tokens", "summary"],
+      "properties": {
+        "workload": { "type": "string", "minLength": 1 },
+        "winner_model_id": { "type": "string", "minLength": 1 },
+        "context_tokens": { "type": "integer", "minimum": 0 },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

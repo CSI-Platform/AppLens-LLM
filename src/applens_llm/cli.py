@@ -13,6 +13,9 @@ from applens_llm.autoresearch_runner import run_autoresearch_once
 from applens_llm.bench import run_openai_chat_benchmark
 from applens_llm.blackboard import append_event, start_experiment
 from applens_llm.capture_ingest import write_capture_records_jsonl
+from applens_llm.context_envelope import write_context_envelope
+from applens_llm.context_quality_probe import run_llamacpp_context_quality_probe, write_context_quality_record
+from applens_llm.deployment_plan import write_deployment_plan
 from applens_llm.driver_evidence import collect_nvidia_driver_evidence
 from applens_llm.eval import evaluate_training_examples_file, write_eval_report
 from applens_llm.experiment_compare import write_experiment_comparison
@@ -20,6 +23,7 @@ from applens_llm.experiments import run_two_lane_experiment
 from applens_llm.fit_report import write_fit_report
 from applens_llm.lane_processes import build_server_command, start_lane, stop_lane
 from applens_llm.llamacpp_probe import run_llamacpp_bench, write_llamacpp_devices
+from applens_llm.local_capability_eval import run_local_capability_eval, write_local_capability_record
 from applens_llm.model_fit_scorecard import write_model_fit_scorecard
 from applens_llm.orchestrator import run_lane_once
 from applens_llm.overnight_loop import load_loop_prompts, run_overnight_loop
@@ -96,9 +100,119 @@ def main(argv: list[str] | None = None) -> int:
             write_eval_report(report, args.output)
             print(f"{report['scores']['passed']}/{report['total']} pass -> {args.output}")
             return 0
+        if args.command == "local-capability-eval":
+            if args.responses:
+                record = write_local_capability_record(
+                    responses_path=args.responses,
+                    output_path=args.output,
+                    thinking_mode=args.thinking_mode,
+                    execute_code_checks=args.execute_code_checks,
+                )
+            else:
+                record = run_local_capability_eval(
+                    endpoint=args.endpoint,
+                    model={
+                        "model_id": args.model,
+                        "display_name": args.display_name or args.model,
+                        "family": args.family,
+                        "parameter_size_b": args.parameter_size_b,
+                        "quantization": args.quantization,
+                    },
+                    runtime={
+                        "engine": args.engine,
+                        "backend": args.backend,
+                        "devices_used": args.device or ["unknown-accelerator-0"],
+                    },
+                    output_path=args.output,
+                    thinking_mode=args.thinking_mode,
+                    max_tokens=args.max_tokens,
+                    timeout_seconds=args.timeout_seconds,
+                    execute_code_checks=args.execute_code_checks,
+                    thinking_control=args.thinking_control,
+                )
+            print(
+                f"local capability eval {record['run_id']} -> {args.output}; "
+                f"score={record['scores']['score_pct']}; band={record['outcome']['band']}"
+            )
+            return 0
         if args.command == "ingest-captures":
             count = write_capture_records_jsonl(args.source, args.output)
             print(f"{count} capture records -> {args.output}")
+            return 0
+        if args.command == "context-envelope":
+            envelope = write_context_envelope(
+                machine_profile_path=args.machine_profile,
+                machine_id=args.machine_id,
+                model_candidates_path=args.model_candidates,
+                context_observation_paths=args.context_observation,
+                envelope_id=args.envelope_id,
+                output_path=args.output,
+            )
+            evidence_models = sum(
+                1 for model in envelope["models"] if model.get("context_evidence_status") != "advertised_unproven"
+            )
+            useful_models = sum(1 for model in envelope["models"] if model["max_recommended_context_tokens"] > 0)
+            print(
+                f"context envelope {envelope['envelope_id']} -> {args.output}; "
+                f"context_evidence_models={evidence_models}; useful_context_models={useful_models}"
+            )
+            return 0
+        if args.command == "context-quality-probe":
+            model = {
+                "model_id": args.model_id,
+                "display_name": args.display_name or args.model_id,
+                "family": args.family,
+                "parameter_size_b": args.parameter_size_b,
+                "quantization": args.quantization,
+            }
+            runtime = {
+                "engine": "llama.cpp",
+                "backend": args.backend,
+                "device_selector": args.device_selector,
+                "devices_used": args.accelerator_id,
+            }
+            if args.response_file:
+                record = write_context_quality_record(
+                    response_path=args.response_file,
+                    output_path=args.output,
+                    observation_output_path=args.context_observation_output,
+                    model=model,
+                    runtime=runtime,
+                    context_tokens=args.context_tokens,
+                    prompt_token_budget=args.prompt_token_budget,
+                    expected_needle=args.expected_needle,
+                    max_tokens=args.max_tokens,
+                    elapsed_seconds=args.elapsed_seconds,
+                    process_returncode=args.process_returncode,
+                    prompt_tokens_per_second=args.prompt_tokens_per_second,
+                    generation_tokens_per_second=args.generation_tokens_per_second,
+                    execute_code_checks=args.execute_code_checks,
+                )
+            else:
+                if not args.binary or not args.gguf_model:
+                    raise ValueError("--binary and --gguf-model are required unless --response-file is provided")
+                record = run_llamacpp_context_quality_probe(
+                    binary=args.binary,
+                    gguf_model=args.gguf_model,
+                    model=model,
+                    runtime=runtime,
+                    context_tokens=args.context_tokens,
+                    prompt_token_budget=args.prompt_token_budget,
+                    output_path=args.output,
+                    observation_output_path=args.context_observation_output,
+                    response_output_path=args.response_output,
+                    max_tokens=args.max_tokens,
+                    gpu_layers=args.gpu_layers,
+                    threads=args.threads,
+                    disable_vulkan_coopmat=args.disable_vulkan_coopmat,
+                    execute_code_checks=args.execute_code_checks,
+                )
+            print(
+                f"context quality {record['run_id']} -> {args.output}; "
+                f"score={record['scores']['quality_score_pct']}; "
+                f"status={record['outcome']['status']}; "
+                f"observation_status={record['observation']['status']}"
+            )
             return 0
         if args.command == "vgm-snapshot":
             snapshot = write_vgm_snapshot(
@@ -152,6 +266,11 @@ def main(argv: list[str] | None = None) -> int:
                 gpu_layers=args.gpu_layers,
                 threads=args.threads,
                 disable_vulkan_coopmat=args.disable_vulkan_coopmat,
+                machine_profile=_load_json(args.machine_profile) if args.machine_profile else None,
+                devices_inventory=_load_json(args.llamacpp_devices) if args.llamacpp_devices else None,
+                benchmark_record_path=args.benchmark_record,
+                model_name=args.model_name,
+                quantization=args.quantization,
             )
             summary = record["llamacpp"]["summary"]
             print(
@@ -321,6 +440,8 @@ def main(argv: list[str] | None = None) -> int:
                 model_candidates_path=args.model_candidates,
                 benchmark_record_paths=args.benchmark_record,
                 experiment_summary_paths=args.experiment_summary,
+                capability_record_paths=args.capability_record,
+                context_envelope_paths=args.context_envelope,
                 workload_profile_path=args.workload_profile,
                 scorecard_id=args.scorecard_id,
                 output_path=args.output,
@@ -329,6 +450,19 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 f"model fit scorecard {scorecard['scorecard_id']} -> {args.output}; "
                 f"top={top['model_id']}; score={top['fit_score']}"
+            )
+            return 0
+        if args.command == "deployment-plan":
+            plan = write_deployment_plan(
+                scorecard_path=args.scorecard,
+                output_path=args.output,
+                plan_id=args.plan_id,
+                workload_name=args.workload_name,
+                workload_intent=args.workload_intent,
+            )
+            print(
+                f"deployment plan {plan['plan_id']} -> {args.output}; "
+                f"primary={plan['recommended_runtime']['model']}"
             )
             return 0
         if args.command == "model-fit-html":
@@ -355,6 +489,10 @@ def main(argv: list[str] | None = None) -> int:
 
     parser.print_help()
     return 1
+
+
+def _load_json(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -418,9 +556,72 @@ def _build_parser() -> argparse.ArgumentParser:
     eval_parser.add_argument("--examples", type=Path, required=True)
     eval_parser.add_argument("--output", type=Path, default=Path("out/eval-report.json"))
 
+    local_capability = subparsers.add_parser("local-capability-eval")
+    local_capability.add_argument("--responses", type=Path, help="Offline response JSON with model, runtime, and responses.")
+    local_capability.add_argument("--endpoint", default="http://127.0.0.1:18080/v1")
+    local_capability.add_argument("--model", default="local-model")
+    local_capability.add_argument("--display-name")
+    local_capability.add_argument("--family", default="unknown")
+    local_capability.add_argument("--parameter-size-b", type=float, default=0)
+    local_capability.add_argument("--quantization", default="unknown")
+    local_capability.add_argument(
+        "--thinking-mode",
+        choices=["on", "off", "auto", "unsupported", "unknown"],
+        default="unknown",
+    )
+    local_capability.add_argument(
+        "--thinking-control",
+        choices=["metadata_only", "chat_template_kwargs"],
+        default="metadata_only",
+        help="Record thinking mode by default; only send runtime-specific controls when explicitly requested.",
+    )
+    local_capability.add_argument("--engine", default="llama.cpp")
+    local_capability.add_argument("--backend", default="unknown")
+    local_capability.add_argument("--device", action="append", default=[])
+    local_capability.add_argument("--max-tokens", type=int, default=512)
+    local_capability.add_argument("--timeout-seconds", type=int, default=180)
+    local_capability.add_argument("--execute-code-checks", action="store_true")
+    local_capability.add_argument("--output", type=Path, default=Path("out/local-capability/applens-local-v1.json"))
+
     ingest = subparsers.add_parser("ingest-captures")
     ingest.add_argument("--source", type=Path, required=True)
     ingest.add_argument("--output", type=Path, default=Path("data/raw/capture-records.jsonl"))
+
+    context_envelope = subparsers.add_parser("context-envelope")
+    context_envelope.add_argument("--machine-profile", type=Path, required=True)
+    context_envelope.add_argument("--machine-id")
+    context_envelope.add_argument("--model-candidates", type=Path, required=True)
+    context_envelope.add_argument("--context-observation", type=Path, action="append", default=[])
+    context_envelope.add_argument("--envelope-id")
+    context_envelope.add_argument("--output", type=Path, required=True)
+
+    context_quality = subparsers.add_parser("context-quality-probe")
+    context_quality.add_argument("--response-file", type=Path)
+    context_quality.add_argument("--binary", type=Path)
+    context_quality.add_argument("--gguf-model", type=Path)
+    context_quality.add_argument("--model-id", required=True)
+    context_quality.add_argument("--display-name")
+    context_quality.add_argument("--family", default="unknown")
+    context_quality.add_argument("--parameter-size-b", type=float, default=0)
+    context_quality.add_argument("--quantization", default="unknown")
+    context_quality.add_argument("--backend", default="vulkan")
+    context_quality.add_argument("--device-selector", required=True)
+    context_quality.add_argument("--accelerator-id", action="append", required=True)
+    context_quality.add_argument("--context-tokens", type=int, required=True)
+    context_quality.add_argument("--prompt-token-budget", type=int, required=True)
+    context_quality.add_argument("--expected-needle", default="APPLENS-CTX-MANUAL")
+    context_quality.add_argument("--max-tokens", type=int, default=256)
+    context_quality.add_argument("--elapsed-seconds", type=float, default=0)
+    context_quality.add_argument("--process-returncode", type=int, default=0)
+    context_quality.add_argument("--prompt-tokens-per-second", type=float, default=0)
+    context_quality.add_argument("--generation-tokens-per-second", type=float)
+    context_quality.add_argument("--gpu-layers", type=int, default=99)
+    context_quality.add_argument("--threads", type=int, default=12)
+    context_quality.add_argument("--disable-vulkan-coopmat", action="store_true")
+    context_quality.add_argument("--execute-code-checks", action="store_true")
+    context_quality.add_argument("--response-output", type=Path)
+    context_quality.add_argument("--context-observation-output", type=Path)
+    context_quality.add_argument("--output", type=Path, required=True)
 
     vgm_snapshot = subparsers.add_parser("vgm-snapshot")
     vgm_snapshot.add_argument("--label", required=True)
@@ -451,6 +652,11 @@ def _build_parser() -> argparse.ArgumentParser:
     llamacpp_bench.add_argument("--gpu-layers", type=int, default=99)
     llamacpp_bench.add_argument("--threads", type=int, default=12)
     llamacpp_bench.add_argument("--disable-vulkan-coopmat", action="store_true")
+    llamacpp_bench.add_argument("--machine-profile", type=Path)
+    llamacpp_bench.add_argument("--llamacpp-devices", type=Path)
+    llamacpp_bench.add_argument("--benchmark-record", type=Path)
+    llamacpp_bench.add_argument("--model-name")
+    llamacpp_bench.add_argument("--quantization", default="unknown")
 
     adrenalin_summary = subparsers.add_parser("adrenalin-summary")
     adrenalin_summary.add_argument("--input", type=Path, required=True)
@@ -563,9 +769,22 @@ def _build_parser() -> argparse.ArgumentParser:
     model_fit_scorecard.add_argument("--model-candidates", type=Path)
     model_fit_scorecard.add_argument("--benchmark-record", type=Path, action="append", default=[])
     model_fit_scorecard.add_argument("--experiment-summary", type=Path, action="append", default=[])
+    model_fit_scorecard.add_argument("--capability-record", type=Path, action="append", default=[])
+    model_fit_scorecard.add_argument("--context-envelope", type=Path, action="append", default=[])
     model_fit_scorecard.add_argument("--workload-profile", type=Path)
     model_fit_scorecard.add_argument("--scorecard-id")
     model_fit_scorecard.add_argument("--output", type=Path, required=True)
+
+    deployment_plan = subparsers.add_parser("deployment-plan")
+    deployment_plan.add_argument("--scorecard", type=Path, required=True)
+    deployment_plan.add_argument("--plan-id")
+    deployment_plan.add_argument("--workload-name", default="Local LLM outfitting")
+    deployment_plan.add_argument(
+        "--workload-intent",
+        choices=["inference", "benchmark", "dataset_prep", "tiny_training_smoke", "training", "agent_runtime"],
+        default="agent_runtime",
+    )
+    deployment_plan.add_argument("--output", type=Path, required=True)
 
     model_fit_html = subparsers.add_parser("model-fit-html")
     model_fit_html.add_argument("--scorecard", type=Path, required=True)

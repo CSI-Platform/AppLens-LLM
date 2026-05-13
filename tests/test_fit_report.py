@@ -27,6 +27,35 @@ def test_build_fit_report_summarizes_hybrid_lane_evidence() -> None:
     assert any(decision["category"] == "Driver" for decision in report["decisions"])
 
 
+def test_build_fit_report_promotes_standalone_benchmark_records_to_observed_lanes() -> None:
+    report = build_fit_report(
+        machine_profile=_machine_profile(),
+        benchmark_records=[
+            _benchmark_record(
+                model_name="jan-v35-4b-q4",
+                devices=["nvidia-dgpu-0"],
+                latency_ms=3200,
+                generation_tps=57.3,
+            ),
+            _benchmark_record(
+                model_name="qwen-27b-iq3",
+                devices=["amd-igpu-0"],
+                latency_ms=32000,
+                generation_tps=5.8,
+            ),
+        ],
+        created_at="2026-05-10T00:00:00Z",
+        report_id="fit-benchmark-only",
+    )
+
+    validate_payload("fit-report", report)
+    assert report["fit"]["class"] == "hybrid_local_ai_worker"
+    assert report["fit"]["confidence"] == "observed"
+    assert report["runtime_recommendation"]["strategy"] == "two_lane_local"
+    assert report["runtime_recommendation"]["fast_lane"]["accelerator_ids"] == ["nvidia-dgpu-0"]
+    assert report["runtime_recommendation"]["capacity_lane"]["accelerator_ids"] == ["amd-igpu-0"]
+
+
 def test_write_fit_report_loads_jsonl_machine_profile_and_json_inputs(tmp_path: Path) -> None:
     machine_profiles = tmp_path / "machines.jsonl"
     summary = tmp_path / "summary.json"
@@ -217,4 +246,57 @@ def _driver_comparison() -> dict:
             "deep": {"latency_ms_delta": -3165, "total_tokens_delta": -15},
         },
         "verdict": "inconclusive_token_counts_differ",
+    }
+
+
+def _benchmark_record(
+    *,
+    model_name: str,
+    devices: list[str],
+    latency_ms: int,
+    generation_tps: float,
+    status: str = "pass",
+) -> dict:
+    return {
+        "schema_version": "0.1",
+        "run_id": f"bench-{model_name}",
+        "created_at": "2026-05-10T00:00:00Z",
+        "host": {
+            "name": "asus-laptop",
+            "os": "windows",
+            "gpu": "hybrid",
+            "vram_mb": 6144,
+            "hardware_topology": _machine_profile()["hardware_topology"],
+        },
+        "runtime": {
+            "engine": "llama.cpp",
+            "backend": "vulkan",
+            "build": "b8892",
+            "command": "llama-bench",
+            "devices_used": devices,
+            "mixed_device_offload": {
+                "attempted": False,
+                "worked": False,
+                "strategy": "single_device",
+                "notes": "unit",
+            },
+        },
+        "model": {"name": model_name, "path": "local", "quantization": "Q4"},
+        "workload": {"prompt_tokens": 512, "completion_tokens": 128},
+        "metrics": {
+            "prompt_tokens_per_second": 100.0,
+            "generation_tokens_per_second": generation_tps,
+            "latency_ms": latency_ms,
+            "vram_used_mb": 0,
+            "device_memory_used_mb": [],
+            "cpu_spill_mb": 0,
+            "thermal_notes": "unit",
+            "temperature_c": 0,
+        },
+        "outcome": {
+            "status": status,
+            "fallback_occurred": False,
+            "failure_modes": ["none"] if status == "pass" else ["oom"],
+            "notes": "unit",
+        },
     }

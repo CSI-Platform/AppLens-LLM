@@ -20,10 +20,10 @@ def build_fit_report(
     benchmarks = benchmark_records or []
     summaries = experiment_summaries or []
     comparisons = experiment_comparisons or []
-    lane_index = _lane_index(summaries)
-    proven_lanes = _proven_lanes(summaries, lane_index)
-    fast_lane = _lane_choice("fast", summaries, lane_index)
-    capacity_lane = _lane_choice("deep", summaries, lane_index)
+    lane_index = _lane_index(summaries, benchmarks)
+    proven_lanes = _proven_lanes(summaries, benchmarks, lane_index)
+    fast_lane = _lane_choice("fast", summaries, benchmarks, lane_index)
+    capacity_lane = _lane_choice("deep", summaries, benchmarks, lane_index, fast_lane=fast_lane)
     strategy = _strategy(fast_lane, capacity_lane)
     fit_class = _fit_class(machine_profile, strategy)
     profile_capacity = machine_profile["hardware_topology"]["usable_inference_capacity"]
@@ -134,7 +134,10 @@ def _machine_summary(machine_profile: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _lane_index(summaries: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+def _lane_index(
+    summaries: list[dict[str, Any]],
+    benchmarks: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
     lanes: dict[str, dict[str, Any]] = {}
     for summary in summaries:
         for started in (summary.get("lifecycle") or {}).get("started", []):
@@ -147,11 +150,22 @@ def _lane_index(summaries: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
                     "accelerator_ids": started.get("accelerator_ids", []),
                     "model_label": started.get("model_label", "unknown"),
                 }
+    for record in benchmarks:
+        runtime = record.get("runtime") or {}
+        lane_id = _benchmark_lane_id(runtime.get("backend", "unknown"), runtime.get("devices_used") or [])
+        lanes[lane_id] = {
+            "lane_id": lane_id,
+            "engine": runtime.get("engine", "unknown"),
+            "backend": runtime.get("backend", "unknown"),
+            "accelerator_ids": runtime.get("devices_used", []),
+            "model_label": (record.get("model") or {}).get("name", "unknown"),
+        }
     return lanes
 
 
 def _proven_lanes(
     summaries: list[dict[str, Any]],
+    benchmarks: list[dict[str, Any]],
     lane_index: dict[str, dict[str, Any]],
 ) -> list[dict[str, Any]]:
     proven: dict[str, dict[str, Any]] = {}
@@ -170,19 +184,42 @@ def _proven_lanes(
                 "total_tokens": _int((response.get("usage") or {}).get("total_tokens")),
                 "model_label": lane.get("model_label", "unknown"),
             }
+    for record in benchmarks:
+        if (record.get("outcome") or {}).get("status") != "pass":
+            continue
+        runtime = record.get("runtime") or {}
+        workload = record.get("workload") or {}
+        metrics = record.get("metrics") or {}
+        lane_id = _benchmark_lane_id(runtime.get("backend", "unknown"), runtime.get("devices_used") or [])
+        model_label = (record.get("model") or {}).get("name", "unknown")
+        proven[f"{lane_id}:{model_label}"] = {
+            "lane_id": lane_id,
+            "backend": runtime.get("backend", "unknown"),
+            "accelerator_ids": runtime.get("devices_used", []),
+            "outcome": "success",
+            "latency_ms": _int(metrics.get("latency_ms")),
+            "total_tokens": _int(workload.get("prompt_tokens")) + _int(workload.get("completion_tokens")),
+            "model_label": model_label,
+        }
     return list(proven.values())
 
 
 def _lane_choice(
     role: str,
     summaries: list[dict[str, Any]],
+    benchmarks: list[dict[str, Any]],
     lane_index: dict[str, dict[str, Any]],
+    fast_lane: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     lane_id = None
     for summary in summaries:
         lane_id = (summary.get("lanes") or {}).get(role)
         if lane_id:
             break
+    if not lane_id:
+        benchmark_choice = _benchmark_lane_choice(role, benchmarks, fast_lane=fast_lane)
+        if benchmark_choice:
+            return benchmark_choice
     lane = lane_index.get(lane_id or "", {})
     return {
         "lane_id": lane_id or "unknown",
@@ -190,6 +227,44 @@ def _lane_choice(
         "accelerator_ids": lane.get("accelerator_ids", []),
         "role": role,
         "model_label": lane.get("model_label", "unknown"),
+    }
+
+
+def _benchmark_lane_choice(
+    role: str,
+    benchmarks: list[dict[str, Any]],
+    *,
+    fast_lane: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    passed = [record for record in benchmarks if (record.get("outcome") or {}).get("status") == "pass"]
+    if not passed:
+        return None
+    if role == "fast":
+        record = min(passed, key=lambda item: _int((item.get("metrics") or {}).get("latency_ms")))
+    else:
+        fast_accelerators = set((fast_lane or {}).get("accelerator_ids") or [])
+        candidates = [
+            record
+            for record in passed
+            if not fast_accelerators.intersection(set((record.get("runtime") or {}).get("devices_used") or []))
+        ]
+        if not candidates:
+            candidates = passed
+        record = max(
+            candidates,
+            key=lambda item: (
+                _model_size_hint((item.get("model") or {}).get("name", "")),
+                _int((item.get("metrics") or {}).get("latency_ms")),
+            ),
+        )
+    runtime = record.get("runtime") or {}
+    devices = runtime.get("devices_used") or []
+    return {
+        "lane_id": _benchmark_lane_id(runtime.get("backend", "unknown"), devices),
+        "backend": runtime.get("backend", "unknown"),
+        "accelerator_ids": devices,
+        "role": role,
+        "model_label": (record.get("model") or {}).get("name", "unknown"),
     }
 
 
@@ -271,8 +346,8 @@ def _benchmark_summary(record: dict[str, Any]) -> dict[str, Any]:
 def _model_guidance(strategy: str) -> list[str]:
     if strategy == "two_lane_local":
         return [
-            "Use the NVIDIA/CUDA lane for small models that fit dedicated VRAM and need low latency.",
-            "Use the AMD/VGM Vulkan lane for larger GGUF models that do not fit the NVIDIA dGPU, accepting slower generation.",
+            "Use the fastest proven lane for small models that fit dedicated GPU memory and need low latency.",
+            "Use the proven AMD/VGM Vulkan capacity lane for larger GGUF models that do not fit the NVIDIA dGPU, accepting slower generation.",
             "Do not combine RTX VRAM and AMD VGM into one advertised memory pool unless a benchmark proves mixed-device offload.",
         ]
     return [
@@ -315,7 +390,7 @@ def _decisions(
 def _next_benchmarks(strategy: str) -> list[str]:
     if strategy == "two_lane_local":
         return [
-            "Run fixed-output repeat benchmarks for candidate small models on the NVIDIA/CUDA fast lane.",
+            "Run fixed-output repeat benchmarks for candidate small models on the proven NVIDIA fast lane.",
             "Run fixed-output repeat benchmarks for candidate larger GGUF models on the AMD/VGM Vulkan capacity lane.",
             "Attach AMD Software telemetry summaries to longer AMD/VGM runs.",
         ]
@@ -329,6 +404,19 @@ def _int(value: Any) -> int:
     if isinstance(value, (int, float)):
         return int(value)
     return 0
+
+
+def _model_size_hint(model_label: str) -> float:
+    lowered = model_label.lower()
+    for marker in ("70b", "34b", "32b", "31b", "27b", "14b", "8b", "7b", "4b", "2b"):
+        if marker in lowered:
+            return float(marker[:-1])
+    return 0
+
+
+def _benchmark_lane_id(backend: str, devices: list[str]) -> str:
+    device_label = devices[0] if devices else "unknown-device"
+    return f"benchmark-{backend}-{device_label}"
 
 
 def _utc_now() -> str:

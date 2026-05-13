@@ -10,7 +10,9 @@
       "local_status": "local",
       "preferred_roles": ["fast_chat", "general_chat", "summarization"],
       "quality_prior": "medium",
-      "observed_model_label": "jan-v35-4b-q4"
+      "observed_model_label": "jan-v35-4b-q4",
+      "advertised_context_tokens": 262144,
+      "advertised_context_source": "https://artificialanalysis.ai/leaderboards/models?size=tiny"
     },
     {
       "model_id": "qwen-27b-iq3",
@@ -22,7 +24,9 @@
       "local_status": "local",
       "preferred_roles": ["deep_review", "coding"],
       "quality_prior": "high",
-      "observed_model_label": "qwen-27b-iq3"
+      "observed_model_label": "qwen-27b-iq3",
+      "advertised_context_tokens": 262144,
+      "advertised_context_source": "https://artificialanalysis.ai/leaderboards/models?size=small"
     },
     {
       "model_id": "gemma-e4b-q4",
@@ -33,7 +37,9 @@
       "file_size_mb": 3200,
       "local_status": "candidate",
       "preferred_roles": ["fast_chat", "summarization", "general_chat"],
-      "quality_prior": "high"
+      "quality_prior": "high",
+      "advertised_context_tokens": 262144,
+      "advertised_context_source": "https://artificialanalysis.ai/leaderboards/models?size=tiny"
     }
   ]
 }

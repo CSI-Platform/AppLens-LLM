@@ -12,9 +12,12 @@ It turns AppLens/AppLens-Tune machine evidence, workload goals, and benchmark re
 - A validation CLI for JSON and JSONL artifacts.
 - A capture ingestion CLI for AppLens `.md` reports and legacy `.txt` reports.
 - An OpenAI-compatible benchmark runner for Jan, llama.cpp, and similar local endpoints.
+- An `applens-local-v1` capability eval for strict JSON, tool-call emulation, coding, hardware reasoning, safety, handoff planning, and thinking-mode comparison.
+- A `context-envelope` artifact that tapers from advertised context windows down to proven local useful context.
 - A blackboard-backed runtime orchestrator for comparing portable local model lanes.
 - A `model-fit-scorecard` artifact that ranks local models by role, backend/device lane, score, blockers, and confidence.
 - A `fit-report` artifact that summarizes the machine-level deployment posture.
+- A scorecard-driven `deployment-plan` artifact that turns rankings into concrete local model assignments, runtime profiles, preflight actions, AppLens-Tune recommendations, and supervisor replacement gates.
 - Roadmap and architecture docs for the AppLens-LLM extension.
 
 ## Current Product Target
@@ -39,6 +42,8 @@ machine evidence + local AI profile + benchmark facts + workload request
 
 The first base model target is Qwen3.5-2B. Training should wait until the baseline eval set proves that the base model misses structure, policy boundaries, or deployment-fit judgment.
 
+`deployment-plan` is also the outfitting contract. The cloud/API planner-supervisor is the 100-point reference baseline until a local model passes replacement gates. Local models can still be assigned as primary workers, deep-review workers, long-context workers, or avoid-primary candidates.
+
 ## Quick Start
 
 ```powershell
@@ -50,6 +55,9 @@ uv run applens-llm validate --schema model-fit-scorecard examples/asus-px13-mode
 uv run applens-llm validate --schema fit-report examples/asus-px13-fit-report.example.json
 uv run applens-llm ingest-captures --source ../AppLens/raw --output data/raw/capture-records.jsonl
 uv run applens-llm eval --examples data/examples.seed.jsonl --output out/eval-report.json
+uv run applens-llm local-capability-eval --responses out/local-capability/responses.json --thinking-mode off --output out/local-capability/qwen35-4b-off.json
+uv run applens-llm context-envelope --machine-profile out/pipeline/asus-px13-current-machine-profile.json --model-candidates out/pipeline/current-downloaded-model-candidates.json --output out/context/asus-px13-context-envelope.json
+uv run applens-llm deployment-plan --scorecard out/scorecards/asus-px13-model-scorecard.json --workload-name "Oracle autoresearch" --output out/deployment-plans/asus-px13-outfit.json
 uv run applens-llm vgm-snapshot --label before-vgm --output out/vgm/before-vgm.json
 uv run applens-llm lanes-check --config examples/runtime-lanes.example.json
 ```
@@ -159,6 +167,18 @@ Each ranking includes the recommended role, best lane/backend/device, score brea
 
 The current sanitized ASUS PX13 example ranks the observed Jan/Qwen 4B fast CUDA lane ahead of the observed Qwen 27B AMD/VGM Vulkan deep lane for fast-chat use, while still recording the 27B model as the better capacity/deep-review lane. Unbenchmarked candidates are scored as inferred until direct evidence exists.
 
+Scorecards now accept `--capability-record` inputs from `applens-local-v1`. This prevents two models from tying on hardware fit alone when one is materially better at strict JSON, tool selection, coding, or handoff planning:
+
+```powershell
+uv run applens-llm model-fit-scorecard --machine-profile data/machines.seed.jsonl --machine-id asus-laptop --model-candidates examples/asus-px13-model-candidates.example.json --benchmark-record out/benchmarks/qwen35-4b.json --capability-record out/local-capability/qwen35-4b-off.json --output out/scorecards/asus-px13-model-scorecard.json
+```
+
+Scorecards also accept `--context-envelope` inputs. This records advertised context separately from max tested and recommended context:
+
+```powershell
+uv run applens-llm model-fit-scorecard --machine-profile out/pipeline/asus-px13-current-machine-profile.json --model-candidates out/pipeline/current-downloaded-model-candidates.json --context-envelope out/context/asus-px13-context-envelope.json --output out/scorecards/asus-px13-model-scorecard.json
+```
+
 Generate a sortable local HTML view from the JSON scorecard and any experiment comparison files:
 
 ```powershell
@@ -166,6 +186,68 @@ uv run applens-llm model-fit-html --scorecard out/scorecards/asus-px13-model-sco
 ```
 
 The HTML file is the human-readable dashboard. The JSON remains the source of truth.
+
+## Deployment Plans
+
+Use `deployment-plan` after a scorecard exists to produce the actual outfitting artifact:
+
+```powershell
+uv run applens-llm deployment-plan --scorecard out/scorecards/asus-px13-model-scorecard.json --plan-id asus-px13-oracle-outfit --workload-name "Oracle autoresearch" --workload-intent agent_runtime --output out/deployment-plans/asus-px13-oracle-outfit.json
+```
+
+The plan keeps the cloud/API model as planner-supervisor unless a local model clears supervisor replacement gates. It assigns local models to worker roles, emits llama.cpp runtime profiles, records proven context limits, lists preflight actions such as closing competing LLM apps, and tells AppLens-Tune which readiness changes are recommended or restart-gated.
+
+## Local Capability Eval
+
+`llama.cpp` `llama-bench` remains the hardware proof: backend, device placement, tokens/sec, OOM, fallback, and thermal behavior. `applens-local-v1` is the local-agent proof. It is inspired by public eval directions such as [BFCL](https://gorilla.cs.berkeley.edu/leaderboard.html) for tool calling, [LiveCodeBench](https://livecodebench.github.io/) for executable coding checks, IFEval-style instruction following, and [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) as a broader eval framework.
+
+The V1 suite scores:
+
+- strict JSON and instruction following
+- JSON tool-call emulation, including no-tool cases
+- hardware reasoning about reported memory versus proven usable capacity
+- benchmark interpretation for fast/deep model lanes
+- a small Python coding task, with unit tests only when `--execute-code-checks` is explicitly passed
+- safe action boundaries for AppLens-LLM and AppLens-Tune
+- planner/executor handoff packets for larger and smaller local models
+
+Thinking mode is recorded as part of the model variant. For Qwen-style models, test direct mode and reasoning mode separately when the runtime supports it:
+
+```powershell
+uv run applens-llm local-capability-eval --endpoint http://127.0.0.1:18080/v1 --model qwen35-4b-q4km --display-name "Qwen3.5 4B Q4_K_M" --family qwen --parameter-size-b 4 --quantization Q4_K_M --backend vulkan --device nvidia-dgpu-0 --thinking-mode off --output out/local-capability/qwen35-4b-off.json
+uv run applens-llm local-capability-eval --endpoint http://127.0.0.1:18080/v1 --model qwen35-4b-q4km --display-name "Qwen3.5 4B Q4_K_M" --family qwen --parameter-size-b 4 --quantization Q4_K_M --backend vulkan --device nvidia-dgpu-0 --thinking-mode on --output out/local-capability/qwen35-4b-on.json
+```
+
+Some runtimes expose thinking controls differently. The record stores requested mode and whether thinking traces leaked into output; the scorecard treats `thinking=on` and `thinking=off` as separate evidence, not as the same model run.
+
+## Context Envelope
+
+Large advertised context windows are claims until this machine proves them. Artificial Analysis may list Qwen and Gemma families around 256k-262k context, but AppLens-LLM must not treat that as usable local deployment capacity by itself.
+
+`context-envelope` tapers from the advertised context tier down through:
+
+```text
+262k -> 128k -> 64k -> 32k -> 16k -> 8k -> 4k
+```
+
+For each model, backend, and lane, AppLens-LLM should distinguish:
+
+- advertised context
+- max tested context
+- max loadable context
+- max stable context
+- max useful context
+- recommended context by workload
+
+The intended observations are long-context benchmark rows with context size, backend, devices used, status, quality score, prompt/generation throughput, failure modes, and workload tags such as `long_context_retrieval`, `coding`, or `summarization`.
+
+Example observation row:
+
+```json
+{"model_id":"gemma4-26b-a4b-q3km","context_tokens":16384,"backend":"vulkan","devices_used":["amd-igpu-0"],"status":"pass","quality_score_pct":89,"generation_tokens_per_second":22.0,"prompt_tokens_per_second":120.0,"failure_modes":["none"],"workloads":["coding","summarization"],"notes":"Sanitized local context observation."}
+```
+
+Generated context envelopes belong under ignored `out/`; committed examples must stay sanitized and must not include raw local paths.
 
 ## Fit Reports
 

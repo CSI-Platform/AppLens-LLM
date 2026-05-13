@@ -12,13 +12,15 @@ from applens_llm.workload_profile import load_workload_profile
 
 
 SCORING_WEIGHTS = {
-    "capacity_fit": 25,
-    "speed_latency": 20,
-    "stability": 15,
-    "role_fit": 15,
-    "quality_size": 10,
+    "capacity_fit": 18,
+    "speed_latency": 13,
+    "stability": 10,
+    "role_fit": 10,
+    "quality_size": 5,
     "operational_readiness": 10,
     "evidence_confidence": 5,
+    "agent_capability": 24,
+    "context_evidence": 5,
 }
 
 
@@ -28,6 +30,8 @@ def build_model_fit_scorecard(
     model_candidates: list[dict[str, Any]] | None = None,
     benchmark_records: list[dict[str, Any]] | None = None,
     experiment_summaries: list[dict[str, Any]] | None = None,
+    capability_records: list[dict[str, Any]] | None = None,
+    context_envelopes: list[dict[str, Any]] | None = None,
     created_at: str | None = None,
     scorecard_id: str | None = None,
     workload_profile: dict[str, Any] | None = None,
@@ -35,11 +39,21 @@ def build_model_fit_scorecard(
     candidates = list(model_candidates or [])
     benchmarks = benchmark_records or []
     summaries = experiment_summaries or []
+    capabilities = capability_records or []
+    context_index = _context_by_model(context_envelopes or [])
     observations = _observations_by_model(summaries, benchmarks)
+    capability_index = _capabilities_by_model(capabilities)
     candidates = _merge_observed_candidates(candidates, observations)
     lane_index = _lane_index(summaries, benchmarks)
     rankings = [
-        _score_candidate(candidate, observations.get(_candidate_observed_label(candidate), []), lane_index, machine_profile)
+        _score_candidate(
+            candidate,
+            observations.get(_candidate_observed_label(candidate), []),
+            capability_index.get(_candidate_observed_label(candidate), []),
+            context_index.get(_candidate_observed_label(candidate)),
+            lane_index,
+            machine_profile,
+        )
         for candidate in candidates
     ]
     rankings.sort(key=lambda row: (-row["fit_score"], row["model_id"]))
@@ -56,6 +70,7 @@ def build_model_fit_scorecard(
         "evidence": {
             "experiment_summary_count": len(summaries),
             "benchmark_record_count": len(benchmarks),
+            "capability_record_count": len(capabilities),
             "candidate_model_count": len(candidates),
         },
         "next_actions": _next_actions(rankings),
@@ -78,6 +93,8 @@ def write_model_fit_scorecard(
     model_candidates_path: Path | None = None,
     benchmark_record_paths: list[Path] | None = None,
     experiment_summary_paths: list[Path] | None = None,
+    capability_record_paths: list[Path] | None = None,
+    context_envelope_paths: list[Path] | None = None,
     workload_profile_path: Path | None = None,
     created_at: str | None = None,
     scorecard_id: str | None = None,
@@ -87,6 +104,8 @@ def write_model_fit_scorecard(
         model_candidates=load_model_candidates(model_candidates_path) if model_candidates_path else None,
         benchmark_records=[_load_json(path) for path in benchmark_record_paths or []],
         experiment_summaries=[_load_json(path) for path in experiment_summary_paths or []],
+        capability_records=[_load_json(path) for path in capability_record_paths or []],
+        context_envelopes=[_load_json(path) for path in context_envelope_paths or []],
         workload_profile=load_workload_profile(workload_profile_path) if workload_profile_path else None,
         created_at=created_at,
         scorecard_id=scorecard_id,
@@ -202,6 +221,29 @@ def _observations_by_model(
     return observations
 
 
+def _capabilities_by_model(records: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for record in records:
+        model = record.get("model") or {}
+        model_id = model.get("model_id")
+        if model_id:
+            grouped[str(model_id)].append(record)
+        display_name = model.get("display_name")
+        if display_name and display_name != model_id:
+            grouped[str(display_name)].append(record)
+    return grouped
+
+
+def _context_by_model(envelopes: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    index: dict[str, dict[str, Any]] = {}
+    for envelope in envelopes:
+        for model in envelope.get("models", []):
+            model_id = model.get("model_id")
+            if model_id:
+                index[str(model_id)] = model
+    return index
+
+
 def _merge_observed_candidates(
     candidates: list[dict[str, Any]],
     observations: dict[str, list[dict[str, Any]]],
@@ -234,6 +276,8 @@ def _merge_observed_candidates(
 def _score_candidate(
     candidate: dict[str, Any],
     observations: list[dict[str, Any]],
+    capability_records: list[dict[str, Any]],
+    context_model: dict[str, Any] | None,
     lane_index: dict[str, dict[str, Any]],
     machine_profile: dict[str, Any],
 ) -> dict[str, Any]:
@@ -248,6 +292,8 @@ def _score_candidate(
         "quality_size": _quality_score(candidate, role),
         "operational_readiness": _readiness_score(candidate, observations, best_lane),
         "evidence_confidence": _confidence_score(observations),
+        "agent_capability": _agent_capability_score(capability_records),
+        "context_evidence": _context_evidence_score(context_model),
     }
     fit_score = sum(breakdown.values())
     blockers = _blockers(candidate, observations, best_lane, fit_score)
@@ -264,11 +310,11 @@ def _score_candidate(
         "fit_score": fit_score,
         "score_band": _score_band(fit_score),
         "score_breakdown": breakdown,
-        "confidence": "observed" if observations else "inferred",
-        "reasons": _reasons(candidate, role, best_lane, breakdown, observations),
+        "confidence": "observed" if observations or capability_records else "inferred",
+        "reasons": _reasons(candidate, role, best_lane, breakdown, observations, capability_records, context_model),
         "blockers": blockers,
-        "evidence": _evidence_summary(observations),
-        "next_benchmark": _next_benchmark(candidate, role, observations, best_lane),
+        "evidence": _evidence_summary(observations, capability_records, context_model),
+        "next_benchmark": _next_benchmark(candidate, role, observations, best_lane, capability_records, context_model),
     }
 
 
@@ -359,7 +405,7 @@ def _capacity_score(
     machine_profile: dict[str, Any],
 ) -> int:
     if any(observation.get("outcome") == "success" for observation in observations):
-        return 25
+        return 18
     if observations:
         return 5
     file_size = _float(candidate.get("file_size_mb"))
@@ -367,70 +413,70 @@ def _capacity_score(
         return 10
     capacity = _lane_capacity(best_lane, machine_profile)
     if not capacity:
-        return 8
+        return 6
     ratio = file_size / capacity
     if ratio <= 0.65:
-        return 23
+        return 16
     if ratio <= 0.85:
-        return 20
+        return 14
     if ratio <= 1.0:
-        return 15
+        return 10
     return 5
 
 
 def _speed_score(best_observation: dict[str, Any] | None, role: str, candidate: dict[str, Any]) -> int:
     if not best_observation:
         params = _float(candidate.get("parameter_size_b"))
-        return 13 if params <= 5 else 6
+        return 9 if params <= 5 else 4
     if best_observation.get("outcome") != "success":
         return 0
     latency = best_observation["latency_ms"]
     if role == "fast_chat":
         if latency <= 3000:
-            return 20
+            return 13
         if latency <= 8000:
-            return 14
-        return 6
+            return 10
+        return 5
     if latency <= 15000:
-        return 14
+        return 10
     if latency <= 30000:
-        return 9
-    return 4
+        return 6
+    return 3
 
 
 def _stability_score(observations: list[dict[str, Any]]) -> int:
     if not observations:
-        return 7
+        return 5
     successes = sum(1 for observation in observations if observation.get("outcome") == "success")
     if successes == len(observations):
-        return 15
+        return 10
     if successes:
-        return 9
+        return 6
     return 2
 
 
 def _role_score(candidate: dict[str, Any], role: str, best_observation: dict[str, Any] | None) -> int:
     if role in (candidate.get("preferred_roles") or []):
-        return 15
+        return 10
     if best_observation:
-        return 12
-    return 8
+        return 8
+    return 5
 
 
 def _quality_score(candidate: dict[str, Any], role: str) -> int:
     prior = candidate.get("quality_prior", "unknown")
     if prior == "high":
-        return 10
-    if prior == "medium":
-        return 8
-    if prior == "low":
         return 5
+    if prior == "medium":
+        return 4
+    if prior == "low":
+        return 2
     params = _float(candidate.get("parameter_size_b"))
     if role == "deep_review" and params >= 20:
-        return 8
+        return 4
     if params <= 8:
-        return 7
-    return 6
+        return 3
+    return 3
 
 
 def _readiness_score(
@@ -458,6 +504,22 @@ def _confidence_score(observations: list[dict[str, Any]]) -> int:
     if observations:
         return 1
     return 2
+
+
+def _agent_capability_score(capability_records: list[dict[str, Any]]) -> int:
+    if not capability_records:
+        return 8
+    best = max(_capability_score_pct(record) for record in capability_records)
+    return min(24, round(best * 24 / 100))
+
+
+def _context_evidence_score(context_model: dict[str, Any] | None) -> int:
+    if not context_model:
+        return 0
+    if context_model.get("context_evidence_status") == "advertised_unproven":
+        return 0
+    score_pct = _float(context_model.get("context_score_pct"))
+    return min(5, round(score_pct * 5 / 100))
 
 
 def _blockers(
@@ -488,6 +550,8 @@ def _reasons(
     best_lane: dict[str, Any],
     breakdown: dict[str, int],
     observations: list[dict[str, Any]],
+    capability_records: list[dict[str, Any]],
+    context_model: dict[str, Any] | None,
 ) -> list[str]:
     reasons = [
         f"Best current role is {role.replace('_', ' ')}.",
@@ -497,29 +561,78 @@ def _reasons(
         reasons.append(f"{len(observations)} observed run(s) are available for this model label.")
     else:
         reasons.append("Score is inferred until this model has a direct benchmark.")
-    if breakdown["capacity_fit"] >= 20:
+    if breakdown["capacity_fit"] >= 16:
         reasons.append("Capacity fit is strong for the selected lane.")
-    if breakdown["speed_latency"] >= 14:
+    if breakdown["speed_latency"] >= 13:
         reasons.append("Latency evidence is suitable for the recommended role.")
     elif breakdown["speed_latency"] <= 8:
         reasons.append("Latency is the main practical constraint.")
+    if capability_records:
+        best_capability = max(_capability_score_pct(record) for record in capability_records)
+        reasons.append(f"AppLens local capability score is {best_capability}/100.")
+    else:
+        reasons.append("Agent capability is unproven until applens-local-v1 is run.")
+    if context_model:
+        reasons.append(_context_reason(context_model))
+    else:
+        reasons.append("Context envelope is unproven until taper benchmarks are run.")
     if candidate.get("quality_prior") == "high":
         reasons.append("Quality prior is high for its size class.")
     return reasons
 
 
-def _evidence_summary(observations: list[dict[str, Any]]) -> dict[str, Any]:
-    if not observations:
-        return {"source": "inferred_from_inventory", "observation_count": 0}
+def _context_reason(context_model: dict[str, Any]) -> str:
+    status = context_model.get("context_evidence_status")
+    if status == "observed_useful":
+        return (
+            f"Recommended context is {context_model.get('max_recommended_context_tokens', 0)} tokens "
+            f"against advertised {context_model.get('advertised_context_tokens', 0)} tokens."
+        )
+    if status == "observed_limited":
+        return "Context load evidence exists, but useful task quality is not proven yet."
+    if status == "advertised_unproven":
+        return "Advertised context is unproven locally; this is not a performance finding."
+    return "Context evidence is unknown until taper benchmarks are run."
+
+
+def _evidence_summary(
+    observations: list[dict[str, Any]],
+    capability_records: list[dict[str, Any]],
+    context_model: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if not observations and not capability_records:
+        payload = {
+            "source": "inferred_from_inventory",
+            "observation_count": 0,
+            "capability_record_count": 0,
+            "thinking_modes": [],
+        }
+        _attach_context_evidence(payload, context_model)
+        return payload
     latencies = [observation["latency_ms"] for observation in observations]
     tokens = [observation["total_tokens"] for observation in observations]
     sources = sorted({observation.get("source", "unknown") for observation in observations})
-    return {
+    if capability_records:
+        sources.append("local_capability_record")
+    payload = {
         "source": "+".join(sources),
         "observation_count": len(observations),
-        "avg_latency_ms": round(sum(latencies) / len(latencies), 2),
-        "avg_total_tokens": round(sum(tokens) / len(tokens), 2),
+        "capability_record_count": len(capability_records),
+        "thinking_modes": sorted(
+            {
+                str((record.get("model") or {}).get("thinking_mode", "unknown"))
+                for record in capability_records
+            }
+        ),
     }
+    if observations:
+        payload["avg_latency_ms"] = round(sum(latencies) / len(latencies), 2)
+        payload["avg_total_tokens"] = round(sum(tokens) / len(tokens), 2)
+    if capability_records:
+        payload["capability_score_pct"] = max(_capability_score_pct(record) for record in capability_records)
+        payload["capability_categories"] = _capability_categories(capability_records)
+    _attach_context_evidence(payload, context_model)
+    return payload
 
 
 def _next_benchmark(
@@ -527,9 +640,17 @@ def _next_benchmark(
     role: str,
     observations: list[dict[str, Any]],
     best_lane: dict[str, Any],
+    capability_records: list[dict[str, Any]],
+    context_model: dict[str, Any] | None,
 ) -> str:
     if not observations:
         return f"Run a direct {role.replace('_', ' ')} benchmark on {best_lane['lane_id']}."
+    if not capability_records:
+        return "Run applens-local-v1 capability eval for JSON, tool, coding, hardware, safety, and handoff behavior."
+    if context_model and context_model.get("context_evidence_status") == "observed_limited":
+        return "Run context quality checks against the largest load-tested tier."
+    if not context_model or not context_model.get("max_recommended_context_tokens"):
+        return "Run context taper benchmarks to prove max useful context for this model and lane."
     if len(observations) < 3:
         return "Run at least three repeat benchmarks with fixed prompt and token caps."
     return "Run task-specific quality checks for the intended role."
@@ -537,6 +658,8 @@ def _next_benchmark(
 
 def _next_actions(rankings: list[dict[str, Any]]) -> list[str]:
     actions = ["Benchmark the top unobserved candidate before making it the default."]
+    if any(not row["evidence"].get("capability_record_count") for row in rankings):
+        actions.append("Run applens-local-v1 on top candidates before using them for agentic local work.")
     if any("requires_amd_vgm_vulkan_path" in row["blockers"] for row in rankings):
         actions.append("Keep AMD VGM/Vulkan checks in the readiness loop for capacity-lane models.")
     actions.append("Use repeated benchmark evidence before changing default model rankings.")
@@ -606,6 +729,36 @@ def _guess_quantization(model_label: str) -> str:
     if "iq3" in lowered:
         return "IQ3"
     return "unknown"
+
+
+def _capability_score_pct(record: dict[str, Any]) -> float:
+    score = ((record.get("scores") or {}).get("score_pct"))
+    return _float(score)
+
+
+def _capability_categories(records: list[dict[str, Any]]) -> dict[str, float]:
+    best: dict[str, float] = {}
+    for record in records:
+        for category, score in ((record.get("scores") or {}).get("category_scores") or {}).items():
+            best[category] = max(best.get(category, 0), _float(score.get("score_pct")))
+    return dict(sorted(best.items()))
+
+
+def _attach_context_evidence(payload: dict[str, Any], context_model: dict[str, Any] | None) -> None:
+    if not context_model:
+        payload["advertised_context_tokens"] = 0
+        payload["max_tested_context_tokens"] = 0
+        payload["recommended_context_tokens"] = 0
+        payload["context_score_pct"] = 0
+        payload["context_evidence_status"] = "unknown"
+        payload["context_interpretation"] = "No context envelope is attached."
+        return
+    payload["advertised_context_tokens"] = _int(context_model.get("advertised_context_tokens"))
+    payload["max_tested_context_tokens"] = _int(context_model.get("max_tested_context_tokens"))
+    payload["recommended_context_tokens"] = _int(context_model.get("max_recommended_context_tokens"))
+    payload["context_score_pct"] = _float(context_model.get("context_score_pct"))
+    payload["context_evidence_status"] = str(context_model.get("context_evidence_status", "unknown"))
+    payload["context_interpretation"] = str(context_model.get("context_interpretation", ""))
 
 
 def _benchmark_lane_id(backend: str, devices: list[str]) -> str:

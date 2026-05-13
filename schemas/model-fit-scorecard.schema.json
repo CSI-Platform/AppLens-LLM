@@ -49,16 +49,20 @@
         "role_fit",
         "quality_size",
         "operational_readiness",
-        "evidence_confidence"
+        "evidence_confidence",
+        "agent_capability",
+        "context_evidence"
       ],
       "properties": {
-        "capacity_fit": { "type": "integer", "const": 25 },
-        "speed_latency": { "type": "integer", "const": 20 },
-        "stability": { "type": "integer", "const": 15 },
-        "role_fit": { "type": "integer", "const": 15 },
-        "quality_size": { "type": "integer", "const": 10 },
+        "capacity_fit": { "type": "integer", "const": 18 },
+        "speed_latency": { "type": "integer", "const": 13 },
+        "stability": { "type": "integer", "const": 10 },
+        "role_fit": { "type": "integer", "const": 10 },
+        "quality_size": { "type": "integer", "const": 5 },
         "operational_readiness": { "type": "integer", "const": 10 },
-        "evidence_confidence": { "type": "integer", "const": 5 }
+        "evidence_confidence": { "type": "integer", "const": 5 },
+        "agent_capability": { "type": "integer", "const": 24 },
+        "context_evidence": { "type": "integer", "const": 5 }
       }
     },
     "rankings": {
@@ -69,10 +73,11 @@
     "evidence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["experiment_summary_count", "benchmark_record_count", "candidate_model_count"],
+      "required": ["experiment_summary_count", "benchmark_record_count", "capability_record_count", "candidate_model_count"],
       "properties": {
         "experiment_summary_count": { "type": "integer", "minimum": 0 },
         "benchmark_record_count": { "type": "integer", "minimum": 0 },
+        "capability_record_count": { "type": "integer", "minimum": 0 },
         "candidate_model_count": { "type": "integer", "minimum": 0 }
       }
     },
@@ -175,10 +180,48 @@
         "evidence": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["source", "observation_count"],
+          "required": [
+            "source",
+            "observation_count",
+            "capability_record_count",
+            "thinking_modes",
+            "advertised_context_tokens",
+            "max_tested_context_tokens",
+            "recommended_context_tokens",
+            "context_score_pct",
+            "context_evidence_status",
+            "context_interpretation"
+          ],
           "properties": {
             "source": { "type": "string", "minLength": 1 },
             "observation_count": { "type": "integer", "minimum": 0 },
+            "capability_record_count": { "type": "integer", "minimum": 0 },
+            "advertised_context_tokens": { "type": "integer", "minimum": 0 },
+            "max_tested_context_tokens": { "type": "integer", "minimum": 0 },
+            "recommended_context_tokens": { "type": "integer", "minimum": 0 },
+            "context_score_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+            "context_evidence_status": {
+              "type": "string",
+              "enum": ["advertised_unproven", "observed_useful", "observed_limited", "not_advertised", "unknown"]
+            },
+            "context_interpretation": { "type": "string" },
+            "capability_score_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+            "capability_categories": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              }
+            },
+            "thinking_modes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["on", "off", "auto", "unsupported", "unknown"]
+              },
+              "uniqueItems": true
+            },
             "avg_latency_ms": { "type": "number", "minimum": 0 },
             "avg_total_tokens": { "type": "number", "minimum": 0 }
           }
@@ -211,16 +254,20 @@
         "role_fit",
         "quality_size",
         "operational_readiness",
-        "evidence_confidence"
+        "evidence_confidence",
+        "agent_capability",
+        "context_evidence"
       ],
       "properties": {
-        "capacity_fit": { "type": "integer", "minimum": 0, "maximum": 25 },
-        "speed_latency": { "type": "integer", "minimum": 0, "maximum": 20 },
-        "stability": { "type": "integer", "minimum": 0, "maximum": 15 },
-        "role_fit": { "type": "integer", "minimum": 0, "maximum": 15 },
-        "quality_size": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "capacity_fit": { "type": "integer", "minimum": 0, "maximum": 18 },
+        "speed_latency": { "type": "integer", "minimum": 0, "maximum": 13 },
+        "stability": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "role_fit": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "quality_size": { "type": "integer", "minimum": 0, "maximum": 5 },
         "operational_readiness": { "type": "integer", "minimum": 0, "maximum": 10 },
-        "evidence_confidence": { "type": "integer", "minimum": 0, "maximum": 5 }
+        "evidence_confidence": { "type": "integer", "minimum": 0, "maximum": 5 },
+        "agent_capability": { "type": "integer", "minimum": 0, "maximum": 24 },
+        "context_evidence": { "type": "integer", "minimum": 0, "maximum": 5 }
       }
     }
   }

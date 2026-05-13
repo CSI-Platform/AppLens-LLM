@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://csi-platform.local/applens-llm/local-capability-record.schema.json",
+  "title": "AppLens-LLM Local Capability Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "created_at",
+    "benchmark",
+    "model",
+    "runtime",
+    "thinking",
+    "scores",
+    "cases",
+    "outcome",
+    "privacy"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "benchmark": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "inspirations"],
+      "properties": {
+        "id": { "type": "string", "const": "applens-local-v1" },
+        "version": { "type": "string", "const": "0.1" },
+        "inspirations": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model_id", "display_name", "family", "parameter_size_b", "quantization", "thinking_mode"],
+      "properties": {
+        "model_id": { "type": "string", "minLength": 1 },
+        "display_name": { "type": "string", "minLength": 1 },
+        "family": { "type": "string", "minLength": 1 },
+        "parameter_size_b": { "type": "number", "minimum": 0 },
+        "quantization": { "type": "string", "minLength": 1 },
+        "thinking_mode": {
+          "type": "string",
+          "enum": ["on", "off", "auto", "unsupported", "unknown"]
+        }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["engine", "backend", "devices_used"],
+      "properties": {
+        "engine": {
+          "type": "string",
+          "enum": ["llama.cpp", "ollama", "jan", "lm_studio", "vllm", "sglang", "transformers", "unknown"]
+        },
+        "backend": {
+          "type": "string",
+          "enum": ["cuda", "vulkan", "rocm", "hip", "directml", "metal", "openvino", "cpu", "npu", "mixed", "unknown"]
+        },
+        "devices_used": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          }
+        }
+      }
+    },
+    "thinking": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requested", "observed_thinking_trace", "notes"],
+      "properties": {
+        "requested": {
+          "type": "string",
+          "enum": ["on", "off", "auto", "unsupported", "unknown"]
+        },
+        "observed_thinking_trace": { "type": "boolean" },
+        "notes": { "type": "string" }
+      }
+    },
+    "scores": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total_points", "max_points", "score_pct", "category_scores"],
+      "properties": {
+        "total_points": { "type": "number", "minimum": 0 },
+        "max_points": { "type": "number", "exclusiveMinimum": 0 },
+        "score_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "category_scores": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["points", "max_points", "score_pct"],
+            "properties": {
+              "points": { "type": "number", "minimum": 0 },
+              "max_points": { "type": "number", "exclusiveMinimum": 0 },
+              "score_pct": { "type": "number", "minimum": 0, "maximum": 100 }
+            }
+          }
+        }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/case_result" }
+    },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "band", "notes"],
+      "properties": {
+        "status": { "type": "string", "enum": ["pass", "fail"] },
+        "band": {
+          "type": "string",
+          "enum": ["agent_ready", "capable", "limited", "not_recommended"]
+        },
+        "notes": { "type": "string" }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit_safe", "local_paths_included"],
+      "properties": {
+        "commit_safe": { "type": "boolean" },
+        "local_paths_included": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "case_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["case_id", "category", "status", "points", "max_points", "issues", "checks", "response_excerpt"],
+      "properties": {
+        "case_id": { "type": "string", "minLength": 1 },
+        "category": {
+          "type": "string",
+          "enum": [
+            "instruction_following",
+            "tool_calling",
+            "coding",
+            "hardware_reasoning",
+            "benchmark_interpretation",
+            "safety_boundary",
+            "handoff_planning"
+          ]
+        },
+        "status": { "type": "string", "enum": ["pass", "fail"] },
+        "points": { "type": "number", "minimum": 0 },
+        "max_points": { "type": "number", "exclusiveMinimum": 0 },
+        "issues": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "passed", "points", "max_points"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "passed": { "type": "boolean" },
+              "points": { "type": "number", "minimum": 0 },
+              "max_points": { "type": "number", "exclusiveMinimum": 0 },
+              "notes": { "type": "string" }
+            }
+          }
+        },
+        "response_excerpt": { "type": "string" }
+      }
+    }
+  }
+}
