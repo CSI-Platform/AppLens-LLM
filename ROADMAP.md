@@ -44,6 +44,7 @@ AppLens captures the raw machine and local AI inventory. AppLens-Tune prepares t
 
 - Let AppLens-Tune feed readiness state into scorecards: VGM active, drivers present, ports available, runtime binaries found, thermal/power notes, and restart-required state.
 - Use `benchmark-suite-run` before model comparisons so model, machine condition, runtime lane, official benchmark tasks, local metrics, and output artifacts are fixed before a run starts.
+- Use `benchmark-suite-result` after execution so pass/fail/unsupported rows, command lines, artifacts, and runner limitations are preserved for scorecards.
 - Add repeat benchmark runs for top-ranked candidate models.
 - Standardize `tiny-v1` for models at or below 4.5B using IFEval, official ARC-Challenge Chat, HellaSwag, GSM8K, BFCL prompt mode, BigCodeBench-Hard screening, LongBench v2 screening, and RULER taper, with task-level runner requirements for generation vs. log-likelihood support.
 - Standardize `small-v1` for models above 4.5B and at or below 30B using the Open LLM Leaderboard v2 family, BFCL V4, BigCodeBench-Hard, LongBench v2, RULER, and finalist-only LiveBench.

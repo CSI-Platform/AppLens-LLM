@@ -12,6 +12,7 @@ from applens_llm.autoresearch_memory import promote_memory
 from applens_llm.autoresearch_runner import run_autoresearch_once
 from applens_llm.bench import run_openai_chat_benchmark
 from applens_llm.benchmark_suite import write_benchmark_suite_run
+from applens_llm.benchmark_suite_runner import run_benchmark_suite
 from applens_llm.blackboard import append_event, start_experiment
 from applens_llm.capture_ingest import write_capture_records_jsonl
 from applens_llm.context_envelope import write_context_envelope
@@ -156,6 +157,27 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 f"benchmark suite {suite['suite_run_id']} -> {args.output}; "
                 f"suite={suite['suite']['suite_id']}; tasks={len(suite['benchmark_plan']['tasks'])}"
+            )
+            return 0
+        if args.command == "benchmark-suite-run":
+            result = run_benchmark_suite(
+                plan_path=args.plan,
+                output_path=args.output,
+                lm_eval_binary=args.lm_eval,
+                endpoint_base=args.endpoint_base,
+                task_ids=args.task_id,
+                local_screening_limit=args.local_screening_limit,
+                dry_run=args.dry_run,
+                allow_unsupported=not args.fail_on_unsupported,
+                timeout_seconds=args.timeout_seconds,
+                use_llamacpp_proxy=args.use_llamacpp_proxy,
+                proxy_host=args.proxy_host,
+                proxy_port=args.proxy_port,
+            )
+            print(
+                f"benchmark suite result {result['suite_run_id']} -> {args.output}; "
+                f"status={result['status']}; pass={result['summary']['passed']}; "
+                f"unsupported={result['summary']['unsupported']}; error={result['summary']['errored']}"
             )
             return 0
         if args.command == "eval":
@@ -673,6 +695,20 @@ def _build_parser() -> argparse.ArgumentParser:
     benchmark_suite.add_argument("--expected-duration-minutes", type=int)
     benchmark_suite.add_argument("--artifact-root")
     benchmark_suite.add_argument("--output", type=Path, required=True)
+
+    benchmark_suite_run = subparsers.add_parser("benchmark-suite-run")
+    benchmark_suite_run.add_argument("--plan", type=Path, required=True)
+    benchmark_suite_run.add_argument("--output", type=Path, required=True)
+    benchmark_suite_run.add_argument("--lm-eval", type=Path, default=Path("lm_eval"))
+    benchmark_suite_run.add_argument("--endpoint-base", help="OpenAI-compatible endpoint base, usually http://127.0.0.1:<port>/v1.")
+    benchmark_suite_run.add_argument("--task-id", action="append", help="Run only a specific suite task_id. Repeat for multiple tasks.")
+    benchmark_suite_run.add_argument("--local-screening-limit", type=int, help="Pass --limit to lm-eval for local screening only.")
+    benchmark_suite_run.add_argument("--timeout-seconds", type=int, default=900)
+    benchmark_suite_run.add_argument("--dry-run", action="store_true")
+    benchmark_suite_run.add_argument("--fail-on-unsupported", action="store_true")
+    benchmark_suite_run.add_argument("--use-llamacpp-proxy", action="store_true")
+    benchmark_suite_run.add_argument("--proxy-host", default="127.0.0.1")
+    benchmark_suite_run.add_argument("--proxy-port", type=int, default=18081)
 
     eval_parser = subparsers.add_parser("eval")
     eval_parser.add_argument("--examples", type=Path, required=True)

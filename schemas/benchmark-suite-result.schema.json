@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://csi-platform.local/applens-llm/benchmark-suite-result.schema.json",
+  "title": "AppLens-LLM Benchmark Suite Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "suite_run_id",
+    "created_at",
+    "status",
+    "plan_path",
+    "artifact_root",
+    "runner_context",
+    "task_results",
+    "summary"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "suite_run_id": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "status": {
+      "type": "string",
+      "enum": ["pass", "partial", "blocked", "fail", "pending"]
+    },
+    "plan_path": { "type": "string", "minLength": 1 },
+    "artifact_root": { "type": "string", "minLength": 1 },
+    "runner_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lm_eval_binary",
+        "endpoint_base",
+        "proxy_used",
+        "local_screening_limit",
+        "allow_unsupported"
+      ],
+      "properties": {
+        "lm_eval_binary": { "type": "string", "minLength": 1 },
+        "endpoint_base": { "type": "string", "minLength": 1 },
+        "proxy_used": { "type": "boolean" },
+        "local_screening_limit": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "allow_unsupported": { "type": "boolean" }
+      }
+    },
+    "task_results": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/task_result" }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "passed", "failed", "unsupported", "pending", "errored"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "unsupported": { "type": "integer", "minimum": 0 },
+        "pending": { "type": "integer", "minimum": 0 },
+        "errored": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "$defs": {
+    "metric_value": {
+      "type": ["number", "integer", "string", "boolean", "null"]
+    },
+    "task_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_id",
+        "benchmark",
+        "category",
+        "runner",
+        "required_lm_call",
+        "status",
+        "failure_modes",
+        "command",
+        "returncode",
+        "metrics",
+        "artifacts",
+        "notes"
+      ],
+      "properties": {
+        "task_id": { "type": "string", "minLength": 1 },
+        "benchmark": { "type": "string", "minLength": 1 },
+        "category": {
+          "type": "string",
+          "enum": ["instruction_following", "reasoning", "math", "coding", "tool_calling", "long_context"]
+        },
+        "runner": { "type": "string", "minLength": 1 },
+        "required_lm_call": {
+          "type": "string",
+          "enum": ["generate_until", "loglikelihood", "external_execution", "context_diagnostic"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail", "unsupported", "pending", "error", "timeout"]
+        },
+        "failure_modes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "none",
+              "unsupported_runner",
+              "unsupported_loglikelihood",
+              "command_failed",
+              "result_missing",
+              "empty_content",
+              "reasoning_trace_leak",
+              "timeout",
+              "parse_error"
+            ]
+          }
+        },
+        "command": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "returncode": {
+          "type": ["integer", "null"]
+        },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/metric_value" }
+        },
+        "effective_samples": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "artifacts": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

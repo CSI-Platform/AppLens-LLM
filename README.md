@@ -95,6 +95,12 @@ Each task declares the LM call shape it requires. Generation tasks can run throu
 uv run python -m applens_llm.llamacpp_lmeval --listen-port 18081 --upstream-base-url http://127.0.0.1:18080
 ```
 
+Use the suite runner to create the result artifact. The runner can start the proxy itself, run supported official `lm-eval` generation tasks, parse `results_*.json`, and retain unsupported rows instead of substituting custom scores:
+
+```powershell
+uv run applens-llm benchmark-suite-run --plan out/benchmark-suites/qwen35-4b-vgm16/benchmark-suite-run.json --output out/benchmark-suites/qwen35-4b-vgm16/benchmark-suite-result.json --lm-eval "$env:LOCALAPPDATA\AppLens-LLM\BenchmarkTools\.venv\Scripts\lm_eval.exe" --use-llamacpp-proxy --local-screening-limit 20
+```
+
 ```powershell
 uv run applens-llm benchmark-suite-plan --suite-run-id qwen35-4b-vgm16-tiny-v1 --model-id qwen35-4b-q4km --display-name "Qwen3.5 4B Q4_K_M" --family qwen --parameter-size-b 4 --quantization Q4_K_M --model-format gguf --model-path sanitized/models/qwen35-4b-q4km.gguf --chat-template qwen --thinking-mode off --reasoning-mode off --condition-id asus-px13-vgm16-ram16 --condition-label "ASUS PX13 VGM 16GB / RAM 16GB" --os-family windows --ram-gb 32 --vgm-enabled --vgm-dedicated-mb 16384 --system-ram-available-gb 16 --accelerator-id amd-igpu-0 --backend vulkan --device-selector Vulkan0 --context-tokens 16384 --output out/benchmark-suites/qwen35-4b-vgm16/benchmark-suite-run.json
 ```

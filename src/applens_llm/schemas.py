@@ -28,6 +28,7 @@ SCHEMA_NAMES = (
     "deployment-plan",
     "benchmark-record",
     "benchmark-suite-run",
+    "benchmark-suite-result",
     "training-example",
     "eval-report",
     "machine-profile",
