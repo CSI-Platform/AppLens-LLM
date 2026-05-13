@@ -359,6 +359,7 @@ def _run_task(
             env=env,
         )
     except subprocess.TimeoutExpired as exc:
+        elapsed = time.monotonic() - started
         stdout_path.write_text(exc.stdout or "", encoding="utf-8")
         stderr_path.write_text(exc.stderr or "", encoding="utf-8")
         return base | {
@@ -366,13 +367,16 @@ def _run_task(
             "failure_modes": ["timeout"],
             "command": command.args,
             "returncode": None,
+            "local_metrics": _local_metrics(elapsed, None),
             "artifacts": [str(stdout_path), str(stderr_path)],
             "notes": f"Timed out after {timeout_seconds} seconds.",
         }
 
+    elapsed = time.monotonic() - started
     stdout_path.write_text(completed.stdout, encoding="utf-8")
     stderr_path.write_text(completed.stderr, encoding="utf-8")
     parsed = parse_lm_eval_results(output_dir, task["task_ref"])
+    local_metrics = _local_metrics(elapsed, parsed.effective_samples)
     artifacts = [str(stdout_path), str(stderr_path)]
     artifacts.extend(str(path) for path in parsed.sample_paths)
     if parsed.result_path:
@@ -385,9 +389,10 @@ def _run_task(
             "command": command.args,
             "returncode": completed.returncode,
             "metrics": parsed.metrics,
+            "local_metrics": local_metrics,
             "effective_samples": parsed.effective_samples,
             "artifacts": artifacts,
-            "notes": f"lm-eval exited non-zero after {time.monotonic() - started:.1f}s.",
+            "notes": f"lm-eval exited non-zero after {elapsed:.1f}s.",
         }
     if parsed.result_path is None:
         return base | {
@@ -395,6 +400,7 @@ def _run_task(
             "failure_modes": ["result_missing"],
             "command": command.args,
             "returncode": completed.returncode,
+            "local_metrics": local_metrics,
             "artifacts": artifacts,
             "notes": "lm-eval exited zero but no results_*.json was found.",
         }
@@ -404,9 +410,10 @@ def _run_task(
         "command": command.args,
         "returncode": completed.returncode,
         "metrics": parsed.metrics,
+        "local_metrics": local_metrics,
         "effective_samples": parsed.effective_samples,
         "artifacts": artifacts,
-        "notes": f"Completed in {time.monotonic() - started:.1f}s.",
+        "notes": f"Completed in {elapsed:.1f}s.",
     }
 
 
@@ -422,6 +429,7 @@ def _base_task_result(task: dict[str, Any]) -> dict[str, Any]:
         "command": [],
         "returncode": None,
         "metrics": {},
+        "local_metrics": {},
         "effective_samples": None,
         "artifacts": [],
         "notes": "",
@@ -445,6 +453,13 @@ def _select_tasks(tasks: list[dict[str, Any]], task_ids: list[str] | None) -> li
     if missing:
         raise ValueError(f"Unknown suite task_id(s): {', '.join(sorted(missing))}")
     return selected
+
+
+def _local_metrics(elapsed_seconds: float, effective_samples: int | None) -> dict[str, float]:
+    metrics = {"wall_time_seconds": round(elapsed_seconds, 3)}
+    if effective_samples and elapsed_seconds > 0:
+        metrics["effective_samples_per_second"] = round(effective_samples / elapsed_seconds, 6)
+    return metrics
 
 
 def _join_endpoint(endpoint_base: str, suffix: str) -> str:

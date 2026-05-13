@@ -140,6 +140,7 @@ def test_build_suite_result_records_unsupported_loglikelihood_task(tmp_path: Pat
                 "command": [],
                 "returncode": None,
                 "metrics": {},
+                "local_metrics": {},
                 "artifacts": [],
                 "notes": "Runtime did not expose prompt token logprobs.",
             }
@@ -172,6 +173,7 @@ def test_build_suite_result_marks_mixed_pass_and_unsupported_as_partial(tmp_path
                 "command": [],
                 "returncode": 0 if status == "pass" else None,
                 "metrics": {},
+                "local_metrics": {"wall_time_seconds": 1.0} if status == "pass" else {},
                 "effective_samples": 2 if status == "pass" else None,
                 "artifacts": [],
                 "notes": "",
@@ -219,6 +221,7 @@ def test_cli_writes_benchmark_suite_result_dry_run(tmp_path: Path) -> None:
     payload = json.loads(output.read_text(encoding="utf-8"))
     validate_payload("benchmark-suite-result", payload)
     assert payload["task_results"][0]["status"] == "pending"
+    assert payload["task_results"][0]["local_metrics"] == {}
 
 
 def test_cli_dry_run_can_target_managed_llamacpp_proxy(tmp_path: Path) -> None:

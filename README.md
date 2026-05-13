@@ -95,7 +95,7 @@ Each task declares the LM call shape it requires. Generation tasks can run throu
 uv run python -m applens_llm.llamacpp_lmeval --listen-port 18081 --upstream-base-url http://127.0.0.1:18080
 ```
 
-Use the suite runner to create the result artifact. The runner can start the proxy itself, run supported official `lm-eval` generation tasks, parse `results_*.json`, and retain unsupported rows instead of substituting custom scores:
+Use the suite runner to create the result artifact. The runner can start the proxy itself, run supported official `lm-eval` generation tasks, parse `results_*.json`, record local wall-time metrics, and retain unsupported rows instead of substituting custom scores:
 
 ```powershell
 uv run applens-llm benchmark-suite-run --plan out/benchmark-suites/qwen35-4b-vgm16/benchmark-suite-run.json --output out/benchmark-suites/qwen35-4b-vgm16/benchmark-suite-result.json --lm-eval "$env:LOCALAPPDATA\AppLens-LLM\BenchmarkTools\.venv\Scripts\lm_eval.exe" --use-llamacpp-proxy --local-screening-limit 20

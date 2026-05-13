@@ -83,6 +83,7 @@
         "command",
         "returncode",
         "metrics",
+        "local_metrics",
         "artifacts",
         "notes"
       ],
@@ -128,6 +129,10 @@
           "type": ["integer", "null"]
         },
         "metrics": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/metric_value" }
+        },
+        "local_metrics": {
           "type": "object",
           "additionalProperties": { "$ref": "#/$defs/metric_value" }
         },

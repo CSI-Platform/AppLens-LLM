@@ -44,6 +44,8 @@ def _server() -> tuple[HTTPServer, str]:
 
 class ReasoningOnlyHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
+        length = int(self.headers.get("Content-Length", "0"))
+        self.rfile.read(length)
         response = {
             "choices": [{"message": {"content": "", "reasoning_content": "reasoning-only answer"}}],
             "usage": {"prompt_tokens": 3, "completion_tokens": 4, "total_tokens": 7},
